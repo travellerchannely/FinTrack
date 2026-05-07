@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: fintrack
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /opt/render/project/src/db/fintrack.json
+    disk:
+      name: fintrack-data
+      mountPath: /opt/render/project/src/db
+      sizeGB: 1
