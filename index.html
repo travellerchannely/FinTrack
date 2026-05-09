@@ -295,6 +295,29 @@ function importRows(rows){
   const sites={},seos={},txs=[],teamsSet=new Set(),catsIncome=new Set(),catsExpense=new Set();
   let splitGroups=0,splitTxs=0;
 
+  // ── Передпрохід: сайти, які зустрічаються у ≥2 командах ──
+  // ── або не виглядають як домен (немає точки) — отримують ──
+  // ── суфікс команди в ключі: "Архів" → "Архів (Baza)", щоб ──
+  // ── не зливались у один запис.
+  const _siteTeams=new Map(); // raw site → Set of teams
+  for(const row of rows){
+    const fr=pA(row['З рахунку']),to=pA(row['На рахунок']);
+    for(const x of [fr,to]){
+      if(!x.site||!x.team)continue;
+      const k=x.site;
+      if(!_siteTeams.has(k))_siteTeams.set(k,new Set());
+      _siteTeams.get(k).add(x.team);
+    }
+  }
+  function uniqSiteKey(site,team){
+    if(!site)return site;
+    const looksDomain=/\./.test(site);
+    const teams=_siteTeams.get(site);
+    const ambiguous=(teams&&teams.size>1)||!looksDomain;
+    if(ambiguous&&team) return `${site} (${team})`;
+    return site;
+  }
+
   // ── Канонікалізація імен (case-insensitive merge) ─────────
   // Для команд/категорій/SEO: existing DB.teams і first-encountered
   // варіант стають канонічними. Усе інше зводиться до них.
@@ -308,7 +331,7 @@ function importRows(rows){
   function normTeam(t){if(!t)return t;const s=String(t).trim();if(!s)return'';const k=s.toLowerCase();if(!canonTeams.has(k))canonTeams.set(k,s);return canonTeams.get(k);}
   function normCat(c){if(!c)return c;const s=String(c).trim();if(!s)return'';const k=s.toLowerCase();if(!canonCats.has(k))canonCats.set(k,s);return canonCats.get(k);}
   function normSeo(h){if(!h)return h;const s=String(h).trim();if(!s)return'';const k=s.toLowerCase();if(!canonSeos.has(k))canonSeos.set(k,s);return canonSeos.get(k);}
-  function applyCanon(tx){if(!tx)return tx;tx.team=normTeam(tx.team);tx.category=normCat(tx.category);tx.seo=normSeo(tx.seo);return tx;}
+  function applyCanon(tx){if(!tx)return tx;tx.team=normTeam(tx.team);tx.category=normCat(tx.category);tx.seo=normSeo(tx.seo);tx.site=uniqSiteKey(tx.site,tx.team);return tx;}
 
   // Перший прохід: групуємо рядки на (parent, splits[])
   const groups=[];
