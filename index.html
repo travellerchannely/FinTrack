@@ -4,1013 +4,2404 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FinTrack — Фінансовий облік</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
-:root {
-  --bg:#0f1419; --s1:#1a1f29; --s2:#0f1419; --cd:#1a1f29; --bd:#2a3140;
-  --t1:#e6e9ef; --t2:#a8b1c2; --t3:#6c7689;
-  --bp:#3b82f6; --bg-bp:#2563eb; --gn:#10b981; --rd:#ef4444; --yl:#f59e0b;
-  --tF:#3b82f6; --tP:#8b5cf6; --tB:#f59e0b; --tBr:#10b981; --tR:#ec4899;
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#0a0c10;--s1:#111318;--s2:#1a1d24;--s3:#22262f;
+--b1:#2a2f3a;--b2:#363c4a;
+--ac:#00e5a0;--ac2:#00b87a;--acd:rgba(0,229,160,0.08);--acd2:rgba(0,229,160,0.15);
+--rd:#ff4d6d;--rdd:rgba(255,77,109,0.1);
+--t1:#e8eaf0;--t2:#8b92a8;--t3:#555d72;
+--ff:'IBM Plex Sans',sans-serif;--fm:'IBM Plex Mono',monospace;
 }
-* { box-sizing:border-box; }
-body { margin:0; font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--t1); }
-.app { display:flex; height:100vh; }
-
-/* Sidebar */
-.sb { width:220px; background:var(--s1); border-right:1px solid var(--bd); display:flex; flex-direction:column; }
-.sb-h { padding:18px; border-bottom:1px solid var(--bd); display:flex; align-items:center; gap:8px; }
-.sb-h .logo { font-size:22px; }
-.sb-h .name { font-weight:600; font-size:16px; }
-.nav { padding:12px 0; flex:1; overflow:auto; }
-.ni { padding:10px 18px; cursor:pointer; color:var(--t2); display:flex; align-items:center; gap:10px; border-left:3px solid transparent; }
-.ni:hover { background:var(--s2); color:var(--t1); }
-.ni.a { background:var(--s2); color:var(--t1); border-left-color:var(--bp); }
-.sb-f { padding:14px; border-top:1px solid var(--bd); }
-.usr { display:flex; align-items:center; gap:10px; }
-.av { width:32px; height:32px; border-radius:50%; background:var(--bp); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:600; }
-.usr .info { flex:1; min-width:0; }
-.usr .nm { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.usr .em { font-size:11px; color:var(--t3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-/* Main */
-.main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-.hdr { padding:16px 24px; border-bottom:1px solid var(--bd); display:flex; align-items:center; justify-content:space-between; }
-.hdr h1 { margin:0; font-size:18px; font-weight:600; }
-.content { flex:1; overflow:auto; padding:24px; }
-
-/* Components */
-.cd { background:var(--cd); border:1px solid var(--bd); border-radius:8px; padding:18px; }
-.btn { background:var(--s2); border:1px solid var(--bd); color:var(--t1); padding:8px 14px; border-radius:6px; cursor:pointer; font-size:13px; }
-.btn:hover { background:var(--bd); }
-.btn.bp { background:var(--bp); border-color:var(--bp); color:#fff; }
-.btn.bp:hover { background:var(--bg-bp); }
-.btn.bg { background:var(--gn); border-color:var(--gn); color:#fff; }
-.btn.br { background:var(--rd); border-color:var(--rd); color:#fff; }
-.btn.bs { padding:5px 10px; font-size:12px; }
-.inp { background:var(--s2); border:1px solid var(--bd); color:var(--t1); padding:8px 10px; border-radius:6px; font-size:13px; outline:none; }
-.inp:focus { border-color:var(--bp); }
-.fr { margin-bottom:14px; }
-.fl { font-size:12px; color:var(--t2); margin-bottom:5px; }
-.tbl { width:100%; border-collapse:collapse; }
-.tbl th, .tbl td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--bd); font-size:13px; }
-.tbl th { color:var(--t3); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; }
-.tbl tr:hover td { background:rgba(255,255,255,0.02); }
-.bt { padding:2px 8px; border-radius:4px; font-size:11px; font-weight:500; color:#fff; }
-.bt.tF { background:var(--tF); } .bt.tP { background:var(--tP); } .bt.tB { background:var(--tB); }
-.bt.tBr { background:var(--tBr); } .bt.tR { background:var(--tR); }
-.bc { background:var(--s2); padding:2px 8px; border-radius:4px; font-size:11px; color:var(--t2); }
-.ap { color:var(--gn); } .an { color:var(--rd); }
-.kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:18px; }
-.kpi { background:var(--cd); border:1px solid var(--bd); border-radius:8px; padding:16px; }
-.kpi .l { font-size:12px; color:var(--t3); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }
-.kpi .v { font-size:24px; font-weight:600; }
-.row { display:flex; gap:14px; flex-wrap:wrap; }
-.modal-bg { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:100; }
-.modal { background:var(--cd); border:1px solid var(--bd); border-radius:10px; padding:22px; width:420px; max-width:90vw; max-height:90vh; overflow:auto; }
-.err { color:var(--rd); font-size:13px; margin-top:10px; text-align:center; min-height:18px; }
-.tabs { display:flex; gap:4px; border-bottom:1px solid var(--bd); margin-bottom:16px; }
-.tab { padding:8px 14px; cursor:pointer; color:var(--t2); border-bottom:2px solid transparent; }
-.tab.a { color:var(--t1); border-bottom-color:var(--bp); }
-.del-btn { color:var(--rd); cursor:pointer; font-size:13px; }
-select.inp { appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%236c7689'><path d='M7 10l5 5 5-5z'/></svg>"); background-repeat:no-repeat; background-position:right 8px center; padding-right:28px; }
+body{background:var(--bg);color:var(--t1);font-family:var(--ff);font-size:16px;min-height:600px;color-scheme:dark}
+.app{display:flex;height:100vh;min-height:600px;overflow:hidden}
+.sb{width:262px;min-width:262px;background:var(--s1);border-right:1px solid var(--b1);display:flex;flex-direction:column}
+.logo{padding:22px 22px 17px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:11px}
+.lm{width:37px;height:37px;background:var(--ac);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#000;font-weight:700;font-size:17px}
+.lt{font-size:18px;font-weight:700;letter-spacing:-0.3px}.ls{font-size:11px;color:var(--t3);font-family:var(--fm);letter-spacing:1px;margin-top:1px}
+.nav{padding:12px 10px;flex:1;overflow-y:auto}
+.ns{font-size:11px;font-weight:600;letter-spacing:1.5px;color:var(--t3);padding:12px 12px 6px;text-transform:uppercase}
+.ni{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:7px;cursor:pointer;color:var(--t2);font-size:15px;transition:all .15s;margin-bottom:2px;border:1px solid transparent}
+.ni:hover{background:var(--s2);color:var(--t1)}.ni.a{background:var(--acd);color:var(--ac);border-color:var(--acd2);font-weight:500}
+.ni .bx{margin-left:auto;background:var(--s3);color:var(--t3);font-size:11px;font-family:var(--fm);padding:2px 6px;border-radius:20px}
+.ni.a .bx{background:var(--acd2);color:var(--ac)}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.tb{padding:0 24px;height:56px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--b1);background:var(--s1);flex-shrink:0}
+.tbt{font-size:18px;font-weight:600}
+.tb-actions{display:flex;gap:8px;margin-left:auto}
+.tb-actions .btn{border-radius:20px;font-size:13px;padding:6px 16px}
+.cnt{flex:1;overflow-y:auto;padding:24px}
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-bottom:20px}
+.sc{background:var(--s1);border:1px solid var(--b1);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.sl{font-size:11px;color:var(--t3);font-family:var(--fm);letter-spacing:.5px;text-transform:uppercase}
+.sv{font-size:26px;font-weight:700;font-family:var(--fm);letter-spacing:-1px}
+.cd{background:var(--s1);border:1px solid var(--b1);border-radius:14px;padding:20px}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap}
+.st{font-size:16px;font-weight:600;white-space:nowrap}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--t3);border-bottom:1px solid var(--b1);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--b1);color:var(--t2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.sr{cursor:pointer}.tr.sr:hover td{background:var(--s2)}.sr:hover td{background:var(--s2)}
+tr.sr.exp td{background:var(--acd)}
+.exp-wrap{background:#0c0f14;border-bottom:1px solid var(--b1)}
+.dpp{display:flex;gap:5px;flex-wrap:wrap}
+.dp{padding:3px 9px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid var(--b2);color:var(--t3);background:transparent;transition:all .15s;font-family:var(--fm)}
+.dp:hover{color:var(--t2)}.dp.a{background:var(--acd);border-color:var(--ac);color:var(--ac)}
+.prow{display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px 0}
+.pp{padding:4px 10px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--b1);background:var(--s3);color:var(--t2);transition:all .15s;font-family:var(--fm)}
+.pp:hover{color:var(--t1);border-color:var(--b2)}.pp.a{background:rgba(72,149,239,.12);border-color:#4895ef;color:#4895ef}
+.tp{padding:4px 10px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--b1);background:var(--s3);color:var(--t2);transition:all .15s;font-family:var(--fm)}
+.tp.tp-in{color:var(--ac);border-color:rgba(0,229,160,.25)}
+.tp.tp-out{color:var(--rd);border-color:rgba(255,77,109,.25)}
+.tp.a-all{background:rgba(72,149,239,.12);border-color:#4895ef;color:#4895ef}
+.tp.a-in{background:rgba(0,229,160,.12);border-color:var(--ac);color:var(--ac)}
+.tp.a-out{background:var(--rdd);border-color:rgba(255,77,109,.4);color:var(--rd)}
+.cat-btn{padding:4px 10px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;font-family:var(--fm);border:1px solid var(--b1);background:var(--s3);color:var(--t2);transition:all .15s}
+.cat-btn:hover{color:var(--t1);border-color:var(--b2)}.cat-btn.a{background:rgba(72,149,239,.12);border-color:#4895ef;color:#4895ef}
+.cat-btn.dis{opacity:.3;cursor:not-allowed;pointer-events:none}
+.exp-row{display:flex;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--b2);flex-wrap:wrap}
+.exp-cats{display:flex;gap:6px;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid var(--b2)}
+.exp-daterow{display:flex;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--b2);background:#0a0d12}
+.exp-sum{display:flex;gap:16px;padding:10px 16px;border-bottom:1px solid var(--b2);font-size:13px;align-items:center;flex-wrap:wrap}
+.exp-tbl{font-size:13px}
+.exp-tbl td{padding:8px 16px;border-bottom:1px solid #151820;color:var(--t2)}
+.exp-tbl tr:last-child td{border-bottom:none}.exp-tbl tr:hover td{background:#12151c}
+.fm{font-family:var(--fm)}
+.bt{display:inline-flex;align-items:center;justify-content:center;padding:0 9px;height:24px;border-radius:4px;font-size:12px;font-weight:500;font-family:var(--fm);line-height:1;white-space:nowrap}
+.bc{display:inline-flex;padding:2px 7px;border-radius:3px;font-size:11px;font-weight:500;background:var(--s3);color:var(--t2);font-family:var(--fm)}
+.ap{color:var(--ac);font-family:var(--fm);font-weight:600}.an{color:var(--rd);font-family:var(--fm);font-weight:600}
+.inp{background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:9px 12px;color:var(--t1);font-family:var(--ff);font-size:14px;outline:none;transition:border-color .15s;height:40px;box-sizing:border-box}
+.inp:focus{border-color:var(--ac)}.inp::placeholder{color:var(--t3)}
+select.inp{cursor:pointer}.inp-sm{padding:5px 9px;font-size:12px;border-radius:5px;height:auto}
+input[type="date"].inp{border-radius:7px;cursor:pointer;font-family:var(--ff)}
+input[type="date"].inp::-webkit-calendar-picker-indicator{filter:invert(.7);cursor:pointer}
+input[type="date"].inp.inp-sm{border-radius:4px;padding:4px 8px;font-size:11px;height:auto}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:7px;border:none;cursor:pointer;font-family:var(--ff);font-size:14px;font-weight:500;transition:all .15s}
+.bp{background:var(--ac);color:#000}.bp:hover{background:var(--ac2)}
+.bg{background:var(--s2);color:var(--t1);border:1px solid var(--b1)}.bg:hover{background:var(--s3)}
+.brd{background:var(--rdd);color:var(--rd);border:1px solid rgba(255,77,109,.3)}.brd:hover{background:rgba(255,77,109,.2)}
+.bs{padding:6px 11px;font-size:13px}
+.fi{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.pb2{height:5px;background:var(--s3);border-radius:2px;overflow:hidden;margin-top:4px}
+.pf{height:100%;border-radius:2px}
+.cb{width:17px;height:17px;border:1.5px solid var(--b2);border-radius:3px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;background:var(--s2);flex-shrink:0}
+.cb.c{background:var(--ac);border-color:var(--ac);color:#000}
+.tc2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.em{text-align:center;padding:60px 20px;color:var(--t3)}
+.alrt{padding:11px 16px;border-radius:7px;font-size:14px;margin-bottom:16px}
+.ai{background:rgba(72,149,239,.1);border:1px solid rgba(72,149,239,.2);color:#4895ef}
+.as{background:var(--acd);border:1px solid var(--acd2);color:var(--ac)}
+.chevron{display:inline-block;transition:transform .2s;font-size:11px;color:var(--t3);margin-right:6px}
+.chevron.open{transform:rotate(90deg)}
+.bb{background:var(--s2);border:1px solid var(--acd2);border-radius:9px;padding:13px 18px;display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.md{background:var(--s1);border:1px solid var(--b2);border-radius:18px;padding:28px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.mdt{font-size:18px;font-weight:600;margin-bottom:20px}
+.fr{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.fl{font-size:11px;color:var(--t3);font-family:var(--fm);letter-spacing:.5px;text-transform:uppercase}
+.fr .inp{width:100%}
+.ma{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+.uz{border:2px dashed var(--b2);border-radius:9px;padding:48px;text-align:center;cursor:pointer;transition:all .2s}
+.uz:hover,.uz.dr{border-color:var(--ac);background:var(--acd)}
+.pb{display:flex;align-items:center;gap:7px;justify-content:center;padding-top:16px}
+.pbt{padding:5px 10px;border-radius:5px;border:1px solid var(--b1);background:var(--s2);color:var(--t2);cursor:pointer;font-size:13px;font-family:var(--fm)}
+.pbt:hover{background:var(--s3)}.pbt.a{background:var(--ac);color:#000;border-color:var(--ac)}
+.pi{color:var(--t3);font-size:13px;font-family:var(--fm)}
+.tF{background:rgba(255,200,50,.12);color:#ffd60a}.tP{background:rgba(255,120,50,.12);color:#ff8c42}
+.tB{background:rgba(72,149,239,.12);color:#4895ef}.tBr{background:rgba(167,100,255,.12);color:#a764ff}
+.tR{background:rgba(0,229,160,.12);color:#00e5a0}
+.ti{background:rgba(0,229,160,.1);color:var(--ac);border:1px solid var(--acd2);padding:2px 8px;border-radius:20px;font-size:11px;font-family:var(--fm)}
+.to{background:var(--rdd);color:var(--rd);border:1px solid rgba(255,77,109,.2);padding:2px 8px;border-radius:20px;font-size:11px;font-family:var(--fm)}
+.del-row td{color:var(--t3)!important;text-decoration:line-through;background:rgba(255,77,109,.04)!important}
+.cdp{position:absolute;z-index:300;background:var(--s1);border:1px solid var(--b2);border-radius:14px;padding:16px;box-shadow:0 12px 40px rgba(0,0,0,.5);min-width:280px;user-select:none}
+.cdp-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cdp-title{font-size:13px;font-weight:600;color:var(--t1)}
+.cdp-nav{display:flex;gap:6px}
+.cdp-nav button{background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--t2);cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s}
+.cdp-nav button:hover{background:var(--s3);color:var(--t1)}
+.cdp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cdp-dow{font-size:10px;color:var(--t3);font-family:var(--fm);padding:4px 0;font-weight:600;text-transform:uppercase}
+.cdp-day{padding:6px 0;font-size:12px;border-radius:6px;cursor:pointer;color:var(--t2);transition:all .12s;font-family:var(--fm)}
+.cdp-day:hover{background:var(--s3);color:var(--t1)}
+.cdp-day.other{color:var(--t3);opacity:.4}
+.cdp-day.today{border:1px solid var(--ac);color:var(--ac)}
+.cdp-day.sel{background:var(--ac);color:#000;font-weight:600}
+.cdp-foot{display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--b1)}
+.cdp-foot button{background:none;border:none;cursor:pointer;font-size:11px;font-family:var(--fm);padding:4px 8px;border-radius:4px;transition:all .12s}
+.cdp-foot .cdp-clear{color:var(--t3)}.cdp-foot .cdp-clear:hover{color:var(--rd)}
+.cdp-foot .cdp-today{color:var(--ac)}.cdp-foot .cdp-today:hover{background:var(--acd)}
+.cdp-trigger{position:relative;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--b1);background:var(--s3);color:var(--t2);transition:all .15s;font-family:var(--fm)}
+.cdp-trigger:hover{color:var(--t1);border-color:var(--b2)}
+.cdp-trigger.has-val{color:var(--t1)}
 </style>
 </head>
 <body>
-<div id="app"></div>
-
+<div class="app">
+<aside class="sb">
+  <div class="logo"><div class="lm">FT</div><div><div class="lt">FinTrack</div><div class="ls">ОБЛІК</div></div></div>
+  <nav class="nav">
+    <div class="ns">Навігація</div>
+    <div class="ni a" onclick="sv('dash')" id="nav-dash">📊 Огляд</div>
+    <div class="ni" onclick="sv('sites')" id="nav-sites">🌐 Сайти <span class="bx" id="nb-sites">0</span></div>
+    <div class="ni" onclick="sv('tx')" id="nav-tx">💰 Транзакції <span class="bx" id="nb-tx">0</span></div>
+    <div class="ni" onclick="sv('analytics')" id="nav-analytics">📈 Аналітика</div>
+    <div class="ni" onclick="sv('settings')" id="nav-settings">⚙️ Налаштування</div>
+    <div class="ni" onclick="sv('import')" id="nav-import">📥 Імпорт</div>
+  </nav>
+  <div id="user-section" style="padding:12px 10px;border-top:1px solid var(--b1);margin-top:auto"></div>
+</aside>
+<div class="main">
+  <div class="tb"><div class="tbt" id="page-title">Огляд</div>
+    <div class="tb-actions" id="tb-actions" style="display:none">
+      <button class="btn bp" onclick="showAddTx('income')" style="border-radius:20px">+ Дохід</button>
+      <button class="btn brd" onclick="showAddTx('expense')" style="border-radius:20px">− Витрата</button>
+    </div>
+  </div>
+  <div class="cnt" id="content"></div>
+</div>
+</div>
+<div id="modal-root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-// ── State ─────────────────────────────────────────────────
-let DB = null;
-let CURRENT_USER = null;
-let VIEW = 'dash';
-let MODAL = null;
+const TEAMS=['Fortuna','Phoenix','Baza','Brand','Review'];
+const CATS=['Hybrid','RevShare','CPA','Content','Domain','Links','Host','Flat','Bonus','Services','Other'];
+const TC={Fortuna:'tF',Phoenix:'tP',Baza:'tB',Brand:'tBr',Review:'tR'};
 
-// ── API ───────────────────────────────────────────────────
-async function api(path, opts = {}) {
-  const res = await fetch(path, {
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
-    body: opts.body ? JSON.stringify(opts.body) : undefined
-  });
-  if (res.status === 401) {
-    CURRENT_USER = null;
-    DB = null;
-    renderApp();
-    throw new Error('unauthenticated');
+function today(){return new Date().toISOString().slice(0,10);}
+function daysAgo(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10);}
+function periodDates(k){
+  const n=new Date(),y=n.getFullYear(),m=n.getMonth();
+  if(k==='cur'){const ms=String(m+1).padStart(2,'0');return{from:`${y}-${ms}-01`,to:`${y}-${ms}-31`};}
+  if(k==='prev'){const py=m===0?y-1:y,pm=m===0?12:m;const ms=String(pm).padStart(2,'0');return{from:`${py}-${ms}-01`,to:`${py}-${ms}-31`};}
+  if(k==='year'){return{from:`${y}-01-01`,to:`${y}-12-31`};}
+  return{from:'',to:''};
+}
+function inP(date,from,to){if(!date)return false;return(!from||date>=from)&&(!to||date<=to);}
+
+function genDemo(){
+  const sl=[{h:'Revo',n:'Revo'},{h:'qryxqq',n:'Чистіков Вадім'},{h:'nikita8008',n:'Ряничев Микита'},
+    {h:'Hellbrod',n:'Hellbrod'},{h:'kirseo',n:'Артеменко Кирило'},{h:'petro_seo',n:'Кушнір Петро'},
+    {h:'Muller',n:'Muller'},{h:'Axel',n:'Axel'},{h:'dhryhorenko',n:'Григоренко Денис'}];
+  const doms=['big-bonanza.com','ampmcasino.com.pl','betclass-italia.it','bazacasino.it','betsatapk.de',
+    'casinocat.pl','casinolo-eu.com','chickenroadpromocode.com','chickenroadslot.com.pl',
+    'fatbankeronline.com','fortunaslot.pl','futuraride.com','galavanson.com','gatesofolympus.com.pl',
+    'inguma.org','jackpot-bells.com.pl','kingchancefr.com','luckypharaohonline.de','malinacasinofi.com',
+    'megajoker.no','nvcasinoapp.com','phoenixcasino.de','rainbetplay.com','razorsharkcasino.de',
+    'royaljokercasino.com','sweetbonanza-casino.net','vinylcasinoapp.com','reviewsite.org'];
+  const sites={};
+  doms.forEach((d,i)=>{sites[d]={team:TEAMS[i%TEAMS.length],seo:sl[i%sl.length].h,seoName:sl[i%sl.length].n};});
+  const seos={};
+  sl.forEach((s,i)=>seos[s.h]={name:s.n,team:TEAMS[i%TEAMS.length]});
+  const txs=[];const now=new Date();
+  for(let i=0;i<700;i++){
+    const d=new Date(now);d.setDate(d.getDate()-Math.floor(Math.random()*400));
+    const dom=doms[Math.floor(Math.random()*doms.length)];
+    const se=sl[Math.floor(Math.random()*sl.length)];
+    const neg=Math.random()<0.3;
+    const amt=Math.round((Math.random()*800+50)*100)/100*(neg?-1:1);
+    const iC=['Hybrid','RevShare','CPA','Flat','Bonus'],eC=['Domain','Links','Host','Content','Services','Other'];
+    const cat=neg?eC[Math.floor(Math.random()*eC.length)]:iC[Math.floor(Math.random()*iC.length)];
+    txs.push({id:i,date:d.toISOString().slice(0,10),amount:amt,site:dom,team:sites[dom].team,
+      category:cat,seo:se.h,seoName:se.n,fired:false,comment:null,deleted:false});
   }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Помилка запиту');
-  return data;
-}
-
-async function loadMe() {
-  try {
-    const { user } = await api('/api/me');
-    CURRENT_USER = user;
-    return true;
-  } catch { return false; }
-}
-
-async function loadDB() {
-  const data = await api('/api/db');
-  DB = data;
-}
-
-async function saveDB() {
-  if (CURRENT_USER?.role !== 'admin') return;
-  await api('/api/db', { method: 'PUT', body: DB });
-}
-
-// ── Login ─────────────────────────────────────────────────
-function renderLogin() {
-  return `
-    <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:linear-gradient(135deg,var(--s1),var(--s2))">
-      <div class="cd" style="width:380px">
-        <div style="text-align:center;margin-bottom:22px">
-          <div style="font-size:36px;margin-bottom:8px">🔐</div>
-          <div style="font-size:22px;font-weight:600">FinTrack</div>
-          <div style="color:var(--t3);font-size:13px;margin-top:4px">Введіть облікові дані</div>
-        </div>
-        <form id="login-form" onsubmit="handleLogin(event)">
-          <div class="fr">
-            <div class="fl">Email</div>
-            <input class="inp" type="email" id="login-email" placeholder="user@example.com" style="width:100%" required autocomplete="username">
-          </div>
-          <div class="fr">
-            <div class="fl">Пароль</div>
-            <input class="inp" type="password" id="login-password" placeholder="••••••••" style="width:100%" required autocomplete="current-password">
-          </div>
-          <button type="submit" class="btn bp" style="width:100%;margin-top:10px">Увійти</button>
-          <div class="err" id="login-error"></div>
-        </form>
-      </div>
-    </div>`;
-}
-
-async function handleLogin(ev) {
-  ev.preventDefault();
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  const errEl = document.getElementById('login-error');
-  errEl.textContent = '';
-  try {
-    const { user } = await api('/api/login', { method: 'POST', body: { email, password } });
-    CURRENT_USER = user;
-    await loadDB();
-    renderApp();
-  } catch (e) {
-    errEl.textContent = e.message || 'Невірні облікові дані';
+  for(let i=0;i<8;i++){
+    const d=new Date(now);d.setDate(d.getDate()-Math.floor(Math.random()*30));
+    const dom=doms[Math.floor(Math.random()*doms.length)];
+    const se=sl[Math.floor(Math.random()*sl.length)];
+    const neg=Math.random()<0.4;
+    const amt=Math.round((Math.random()*500+50)*100)/100*(neg?-1:1);
+    txs.push({id:700+i,date:d.toISOString().slice(0,10),amount:amt,site:dom,team:sites[dom].team,
+      category:CATS[Math.floor(Math.random()*CATS.length)],seo:se.h,seoName:se.n,fired:false,comment:null,deleted:true});
   }
+  return{sites,seos,transactions:txs};
 }
 
-async function handleLogout() {
-  try { await api('/api/logout', { method: 'POST' }); } catch {}
-  CURRENT_USER = null;
-  DB = null;
-  renderApp();
+function pA(v){if(!v)return{team:null,site:null};const m=v.match(/^\(([^)]+)\)\s*(.+)/);return m?{team:m[1].trim(),site:m[2].trim()}:{team:null,site:v.trim()};}
+function pT(v){if(!v||v==='No Tag')return{handle:null,name:null,fired:false};
+  const fired=v.includes('Звільнен');
+  const hm=v.match(/@(\S+)/),nm=v.match(/\(([^)]+)\)/);
+  return{handle:hm?hm[1]:null,name:nm?nm[1]:(hm?hm[1]:null),fired,raw:v};
+}
+function parseFmDate(v){
+  if(!v)return null;
+  if(v instanceof Date)return isNaN(v)?null:v.toISOString().slice(0,10);
+  const s=String(v);
+  // "dd.MM.yyyy HH:mm:ss" format
+  const m=s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if(m)return`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  const d=new Date(s);return isNaN(d)?null:d.toISOString().slice(0,10);
+}
+function parseFmDateTime(v){
+  if(!v)return null;
+  if(v instanceof Date)return isNaN(v)?null:v.toISOString();
+  return String(v);
+}
+// Finmap split-row детектор:
+// рядок-частина має дату=null, суму!=null, команду!=null, обидва рахунки=null, категорію=null
+function _isFinmapSplit(row){
+  return !row['Дата платежу'] && !row['Дата нарахування']
+      && (row['Сума в валюті компанії']!=null && row['Сума в валюті компанії']!=='')
+      && (row['Проект']!=null && String(row['Проект']).trim()!=='')
+      && !row['З рахунку'] && !row['На рахунок']
+      && (row['Категорія']==null || String(row['Категорія']).trim()==='');
 }
 
-// ── App shell ─────────────────────────────────────────────
-function renderApp() {
-  const root = document.getElementById('app');
-  if (!CURRENT_USER) {
-    root.innerHTML = renderLogin();
-    setTimeout(() => document.getElementById('login-email')?.focus(), 30);
-    return;
-  }
-  root.innerHTML = renderShell();
-  renderView();
-}
-
-function renderShell() {
-  const u = CURRENT_USER;
-  const initials = (u.name || u.email).slice(0, 2).toUpperCase();
-  const isAdmin = u.role === 'admin';
-  const items = [
-    { id: 'dash', icon: '📊', label: 'Огляд' },
-    { id: 'tx', icon: '💸', label: 'Транзакції' },
-    { id: 'sites', icon: '🌐', label: 'Сайти' },
-    { id: 'analytics', icon: '📈', label: 'Аналітика' },
-    isAdmin ? { id: 'users', icon: '👥', label: 'Користувачі' } : null,
-    isAdmin ? { id: 'import', icon: '📥', label: 'Імпорт з Finmap' } : null,
-    { id: 'settings', icon: '⚙️', label: 'Налаштування' }
-  ].filter(Boolean);
-
-  return `
-    <div class="app">
-      <aside class="sb">
-        <div class="sb-h"><span class="logo">📒</span><span class="name">FinTrack</span></div>
-        <nav class="nav">
-          ${items.map(i => `<div class="ni ${VIEW===i.id?'a':''}" onclick="setView('${i.id}')"><span>${i.icon}</span><span>${i.label}</span></div>`).join('')}
-        </nav>
-        <div class="sb-f">
-          <div class="usr">
-            <div class="av">${escapeHtml(initials)}</div>
-            <div class="info">
-              <div class="nm">${escapeHtml(u.name || u.email)}</div>
-              <div class="em">${escapeHtml(u.email)}</div>
-            </div>
-            <button class="btn bs" onclick="handleLogout()" title="Вийти">↪</button>
-          </div>
-        </div>
-      </aside>
-      <main class="main">
-        <header class="hdr">
-          <h1 id="page-title">Огляд</h1>
-          <div id="hdr-actions"></div>
-        </header>
-        <div class="content" id="content"></div>
-      </main>
-    </div>
-    <div id="modal-root"></div>`;
-}
-
-function setView(v) {
-  VIEW = v;
-  document.querySelectorAll('.ni').forEach(el => el.classList.remove('a'));
-  const el = document.querySelector(`[onclick="setView('${v}')"]`);
-  if (el) el.classList.add('a');
-  renderView();
-}
-
-const TITLES = { dash:'Огляд', tx:'Транзакції', sites:'Сайти', analytics:'Аналітика', users:'Користувачі', import:'Імпорт з Finmap', settings:'Налаштування' };
-
-function renderView() {
-  document.getElementById('page-title').textContent = TITLES[VIEW] || VIEW;
-  document.getElementById('hdr-actions').innerHTML = '';
-  const c = document.getElementById('content');
-  switch (VIEW) {
-    case 'dash':      c.innerHTML = renderDash(); break;
-    case 'tx':        c.innerHTML = renderTx(); break;
-    case 'sites':     c.innerHTML = renderSites(); break;
-    case 'analytics': c.innerHTML = renderAnalytics(); break;
-    case 'users':     c.innerHTML = renderUsers(); break;
-    case 'import':    c.innerHTML = renderImport(); break;
-    case 'settings':  c.innerHTML = renderSettings(); break;
-    default:          c.innerHTML = '<div class="cd">Невідомий розділ</div>';
-  }
-}
-
-// ── Helpers ───────────────────────────────────────────────
-function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-}
-function fmtMoney(v) {
-  const sym = (DB?.currency === 'EUR') ? '€' : (DB?.currency === 'UAH') ? '₴' : '$';
-  const n = Number(v) || 0;
-  return (n >= 0 ? '' : '-') + sym + Math.abs(n).toFixed(2);
-}
-function fmtDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('uk-UA');
-}
-function applyUserFilter(items) {
-  if (CURRENT_USER.role === 'admin') return items;
-  const u = CURRENT_USER;
-  return items.filter(it => {
-    if (u.teams?.length && it.team && !u.teams.includes(it.team)) return false;
-    if (u.categories?.length && it.category && !u.categories.includes(it.category)) return false;
-    if (u.sites?.length && it.site && !u.sites.includes(it.site)) return false;
-    return true;
-  });
-}
-
-// ── Dashboard ─────────────────────────────────────────────
-function renderDash() {
-  const tx = applyUserFilter((DB.transactions || []).filter(t => !t.deleted));
-  const total = tx.reduce((s, t) => s + Number(t.amount || 0), 0);
-  const income = tx.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-  const expense = tx.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0);
-  const sites = Object.keys(DB.sites || {}).length;
-
-  // Group by team
-  const byTeam = {};
-  for (const t of tx) {
-    if (!t.team) continue;
-    byTeam[t.team] = (byTeam[t.team] || 0) + t.amount;
-  }
-  const teamRows = Object.entries(byTeam).sort((a,b) => b[1]-a[1]);
-
-  return `
-    <div class="kpis">
-      <div class="kpi"><div class="l">Загальний баланс</div><div class="v ${total>=0?'ap':'an'}">${fmtMoney(total)}</div></div>
-      <div class="kpi"><div class="l">Доходи</div><div class="v ap">${fmtMoney(income)}</div></div>
-      <div class="kpi"><div class="l">Витрати</div><div class="v an">${fmtMoney(expense)}</div></div>
-      <div class="kpi"><div class="l">Сайти</div><div class="v">${sites}</div></div>
-      <div class="kpi"><div class="l">Транзакції</div><div class="v">${tx.length}</div></div>
-    </div>
-    <div class="cd">
-      <div style="font-weight:600;margin-bottom:14px">Баланс по командах</div>
-      ${teamRows.length === 0 ? '<div style="color:var(--t3)">Немає даних</div>' :
-        `<table class="tbl"><thead><tr><th>Команда</th><th style="text-align:right">Баланс</th></tr></thead><tbody>
-        ${teamRows.map(([team, val]) => `<tr><td>${teamBadge(team)}</td><td style="text-align:right" class="${val>=0?'ap':'an'}">${fmtMoney(val)}</td></tr>`).join('')}
-        </tbody></table>`}
-    </div>`;
-}
-
-function teamBadge(t) {
-  const map = { Fortuna:'tF', Phoenix:'tP', Baza:'tB', Brand:'tBr', Review:'tR' };
-  return `<span class="bt ${map[t] || ''}">${escapeHtml(t)}</span>`;
-}
-
-// ── Transactions ──────────────────────────────────────────
-let txFilter = { team: '', category: '', q: '' };
-
-function renderTx() {
-  document.getElementById('hdr-actions').innerHTML = canAdd() ?
-    `<button class="btn bp" onclick="openTxModal()">+ Нова транзакція</button>` : '';
-
-  const tx = applyUserFilter((DB.transactions || []).filter(t => !t.deleted))
-    .filter(t => !txFilter.team || t.team === txFilter.team)
-    .filter(t => !txFilter.category || t.category === txFilter.category)
-    .filter(t => !txFilter.q || (t.description || '').toLowerCase().includes(txFilter.q.toLowerCase()))
-    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-
-  const teams = (DB.teams || []);
-  const cats = (DB.categories || []);
-
-  return `
-    <div class="cd" style="margin-bottom:14px">
-      <div class="row" style="align-items:flex-end">
-        <div class="fr" style="flex:1;min-width:200px;margin:0">
-          <div class="fl">Пошук</div>
-          <input class="inp" style="width:100%" placeholder="Опис..." value="${escapeHtml(txFilter.q)}" oninput="txFilter.q=this.value;renderView()">
-        </div>
-        <div class="fr" style="margin:0">
-          <div class="fl">Команда</div>
-          <select class="inp" onchange="txFilter.team=this.value;renderView()">
-            <option value="">Усі</option>
-            ${teams.map(t => `<option value="${t}" ${txFilter.team===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
-          </select>
-        </div>
-        <div class="fr" style="margin:0">
-          <div class="fl">Категорія</div>
-          <select class="inp" onchange="txFilter.category=this.value;renderView()">
-            <option value="">Усі</option>
-            ${cats.map(c => `<option value="${c}" ${txFilter.category===c?'selected':''}>${escapeHtml(c)}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-    </div>
-    <div class="cd" style="padding:0;overflow:hidden">
-      <table class="tbl">
-        <thead><tr>
-          <th>Дата</th><th>Опис</th><th>Категорія</th><th>Команда</th><th>Сайт</th>
-          <th style="text-align:right">Сума</th><th></th>
-        </tr></thead>
-        <tbody>
-          ${tx.length === 0 ? `<tr><td colspan="7" style="text-align:center;color:var(--t3);padding:24px">Немає транзакцій</td></tr>` :
-            tx.map(t => `<tr>
-              <td>${fmtDate(t.date)}</td>
-              <td>${escapeHtml(t.description || '—')}</td>
-              <td>${t.category ? `<span class="bc">${escapeHtml(t.category)}</span>` : '—'}</td>
-              <td>${t.team ? teamBadge(t.team) : '—'}</td>
-              <td>${escapeHtml(t.site || '—')}</td>
-              <td style="text-align:right" class="${t.amount>=0?'ap':'an'}">${fmtMoney(t.amount)}</td>
-              <td style="text-align:right">
-                ${canEdit() ? `<button class="btn bs" onclick="openTxModal(${t.id})">✎</button>` : ''}
-                ${canDelete() ? `<button class="btn bs br" onclick="deleteTx(${t.id})" style="margin-left:4px">✕</button>` : ''}
-              </td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`;
-}
-
-function canAdd()    { return CURRENT_USER.role === 'admin' || CURRENT_USER.canAdd; }
-function canEdit()   { return CURRENT_USER.role === 'admin' || CURRENT_USER.canEdit; }
-function canDelete() { return CURRENT_USER.role === 'admin' || CURRENT_USER.canDelete; }
-
-function openTxModal(id) {
-  const tx = id ? (DB.transactions.find(t => t.id === id) || {}) : {
-    date: new Date().toISOString().slice(0,10),
-    amount: 0, description: '', category: '', team: '', site: ''
-  };
-  showModal(`
-    <h3 style="margin:0 0 16px">${id ? 'Редагувати' : 'Нова'} транзакція</h3>
-    <div class="fr"><div class="fl">Дата</div><input class="inp" type="date" id="t-date" value="${tx.date || ''}" style="width:100%"></div>
-    <div class="fr"><div class="fl">Сума (від'ємна = витрата)</div><input class="inp" type="number" step="0.01" id="t-amount" value="${tx.amount ?? 0}" style="width:100%"></div>
-    <div class="fr"><div class="fl">Опис</div><input class="inp" id="t-desc" value="${escapeHtml(tx.description || '')}" style="width:100%"></div>
-    <div class="fr"><div class="fl">Категорія</div>
-      <select class="inp" id="t-cat" style="width:100%">
-        <option value="">—</option>
-        ${(DB.categories||[]).map(c => `<option value="${c}" ${c===tx.category?'selected':''}>${escapeHtml(c)}</option>`).join('')}
-      </select>
-    </div>
-    <div class="fr"><div class="fl">Команда</div>
-      <select class="inp" id="t-team" style="width:100%">
-        <option value="">—</option>
-        ${(DB.teams||[]).map(t => `<option value="${t}" ${t===tx.team?'selected':''}>${escapeHtml(t)}</option>`).join('')}
-      </select>
-    </div>
-    <div class="fr"><div class="fl">Сайт</div>
-      <select class="inp" id="t-site" style="width:100%">
-        <option value="">—</option>
-        ${Object.keys(DB.sites||{}).map(s => `<option value="${s}" ${s===tx.site?'selected':''}>${escapeHtml(s)}</option>`).join('')}
-      </select>
-    </div>
-    <div class="err" id="t-err"></div>
-    <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn" onclick="closeModal()" style="flex:1">Скасувати</button>
-      <button class="btn bp" onclick="saveTx(${id || 'null'})" style="flex:1">Зберегти</button>
-    </div>
-  `);
-}
-
-async function saveTx(id) {
-  const tx = {
-    date: document.getElementById('t-date').value,
-    amount: parseFloat(document.getElementById('t-amount').value) || 0,
-    description: document.getElementById('t-desc').value.trim(),
-    category: document.getElementById('t-cat').value,
-    team: document.getElementById('t-team').value,
-    site: document.getElementById('t-site').value
-  };
-  if (!tx.date) { document.getElementById('t-err').textContent = 'Вкажіть дату'; return; }
-  DB.transactions = DB.transactions || [];
-  if (id) {
-    const ex = DB.transactions.find(x => x.id === id);
-    if (ex) Object.assign(ex, tx);
-  } else {
-    DB.nextTxId = (DB.nextTxId || 1);
-    DB.transactions.push({ id: DB.nextTxId++, createdBy: CURRENT_USER.id, createdAt: new Date().toISOString(), ...tx });
-  }
-  try {
-    await saveDB();
-    closeModal();
-    renderView();
-  } catch (e) {
-    document.getElementById('t-err').textContent = e.message;
-  }
-}
-
-async function deleteTx(id) {
-  if (!confirm('Видалити транзакцію?')) return;
-  const t = DB.transactions.find(x => x.id === id);
-  if (t) t.deleted = true;
-  await saveDB();
-  renderView();
-}
-
-// ── Sites ─────────────────────────────────────────────────
-function renderSites() {
-  if (CURRENT_USER.role === 'admin') {
-    document.getElementById('hdr-actions').innerHTML = `<button class="btn bp" onclick="openSiteModal()">+ Додати сайт</button>`;
-  }
-  const sites = DB.sites || {};
-  const tx = (DB.transactions || []).filter(t => !t.deleted);
-  const stats = {};
-  for (const s of Object.keys(sites)) stats[s] = { bal: 0, cnt: 0 };
-  for (const t of tx) {
-    if (t.site && stats[t.site]) {
-      stats[t.site].bal += Number(t.amount || 0);
-      stats[t.site].cnt++;
-    }
-  }
-  const rows = Object.entries(sites);
-  return `
-    <div class="cd" style="padding:0">
-      <table class="tbl">
-        <thead><tr><th>Домен</th><th>Команда</th><th style="text-align:right">Транзакцій</th><th style="text-align:right">Баланс</th>${CURRENT_USER.role==='admin'?'<th></th>':''}</tr></thead>
-        <tbody>
-          ${rows.length === 0 ? `<tr><td colspan="5" style="text-align:center;color:var(--t3);padding:24px">Сайти не додані</td></tr>` :
-            rows.map(([domain, info]) => `<tr>
-              <td>${escapeHtml(domain)}</td>
-              <td>${info.team ? teamBadge(info.team) : '—'}</td>
-              <td style="text-align:right">${stats[domain]?.cnt || 0}</td>
-              <td style="text-align:right" class="${(stats[domain]?.bal||0)>=0?'ap':'an'}">${fmtMoney(stats[domain]?.bal || 0)}</td>
-              ${CURRENT_USER.role==='admin' ? `<td style="text-align:right"><button class="btn bs br" onclick="deleteSite('${escapeHtml(domain)}')">✕</button></td>` : ''}
-            </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`;
-}
-
-function openSiteModal() {
-  showModal(`
-    <h3 style="margin:0 0 16px">Новий сайт</h3>
-    <div class="fr"><div class="fl">Домен</div><input class="inp" id="s-domain" placeholder="example.com" style="width:100%"></div>
-    <div class="fr"><div class="fl">Команда</div>
-      <select class="inp" id="s-team" style="width:100%">
-        <option value="">—</option>
-        ${(DB.teams||[]).map(t => `<option value="${t}">${escapeHtml(t)}</option>`).join('')}
-      </select>
-    </div>
-    <div class="err" id="s-err"></div>
-    <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn" onclick="closeModal()" style="flex:1">Скасувати</button>
-      <button class="btn bp" onclick="saveSite()" style="flex:1">Додати</button>
-    </div>
-  `);
-}
-
-async function saveSite() {
-  const domain = document.getElementById('s-domain').value.trim().toLowerCase();
-  const team = document.getElementById('s-team').value;
-  if (!domain) { document.getElementById('s-err').textContent = 'Вкажіть домен'; return; }
-  DB.sites = DB.sites || {};
-  if (DB.sites[domain]) { document.getElementById('s-err').textContent = 'Сайт вже існує'; return; }
-  DB.sites[domain] = { team, createdAt: new Date().toISOString() };
-  try { await saveDB(); closeModal(); renderView(); }
-  catch (e) { document.getElementById('s-err').textContent = e.message; }
-}
-
-async function deleteSite(domain) {
-  if (!confirm(`Видалити сайт "${domain}"?`)) return;
-  delete DB.sites[domain];
-  await saveDB();
-  renderView();
-}
-
-// ── Analytics ─────────────────────────────────────────────
-function renderAnalytics() {
-  const tx = applyUserFilter((DB.transactions || []).filter(t => !t.deleted));
-  // По місяцях
-  const byMonth = {};
-  for (const t of tx) {
-    const m = (t.date || '').slice(0, 7);
-    if (!m) continue;
-    byMonth[m] = byMonth[m] || { income: 0, expense: 0 };
-    if (t.amount >= 0) byMonth[m].income += t.amount;
-    else byMonth[m].expense += t.amount;
-  }
-  const months = Object.entries(byMonth).sort();
-  const max = Math.max(1, ...months.flatMap(([, v]) => [v.income, -v.expense]));
-
-  return `
-    <div class="cd">
-      <div style="font-weight:600;margin-bottom:14px">По місяцях</div>
-      ${months.length === 0 ? '<div style="color:var(--t3)">Немає даних</div>' :
-        `<table class="tbl"><thead><tr><th>Місяць</th><th style="text-align:right">Доходи</th><th style="text-align:right">Витрати</th><th style="text-align:right">Чистий</th><th style="width:30%">Графік</th></tr></thead><tbody>
-        ${months.map(([m, v]) => {
-          const net = v.income + v.expense;
-          const incPct = (v.income / max) * 100;
-          const expPct = (-v.expense / max) * 100;
-          return `<tr>
-            <td>${m}</td>
-            <td style="text-align:right" class="ap">${fmtMoney(v.income)}</td>
-            <td style="text-align:right" class="an">${fmtMoney(v.expense)}</td>
-            <td style="text-align:right" class="${net>=0?'ap':'an'}">${fmtMoney(net)}</td>
-            <td><div style="display:flex;gap:2px;height:18px;align-items:center">
-              <div style="background:var(--gn);height:100%;width:${incPct}%;border-radius:2px"></div>
-              <div style="background:var(--rd);height:100%;width:${expPct}%;border-radius:2px"></div>
-            </div></td>
-          </tr>`;
-        }).join('')}
-        </tbody></table>`}
-    </div>`;
-}
-
-// ── Users (admin) ─────────────────────────────────────────
-function renderUsers() {
-  if (CURRENT_USER.role !== 'admin') return '<div class="cd">Доступ заборонено</div>';
-  document.getElementById('hdr-actions').innerHTML = `<button class="btn bp" onclick="openUserModal()">+ Створити користувача</button>`;
-  const users = DB.users || [];
-  return `
-    <div class="cd" style="padding:0">
-      <table class="tbl">
-        <thead><tr><th>Email</th><th>Ім'я</th><th>Роль</th><th>Створено</th><th></th></tr></thead>
-        <tbody>
-          ${users.map(u => `<tr>
-            <td>${escapeHtml(u.email)}</td>
-            <td>${escapeHtml(u.name || '—')}</td>
-            <td><span class="bc">${u.role === 'admin' ? '👑 admin' : 'user'}</span></td>
-            <td>${u.createdAt ? fmtDate(u.createdAt) : '—'}</td>
-            <td style="text-align:right">
-              <button class="btn bs" onclick="openUserModal(${u.id})">✎</button>
-              ${u.id !== CURRENT_USER.id ? `<button class="btn bs br" onclick="deleteUser(${u.id})" style="margin-left:4px">✕</button>` : ''}
-            </td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`;
-}
-
-function openUserModal(id) {
-  const u = id ? (DB.users.find(x => x.id === id) || {}) : { role: 'user' };
-  const isEdit = !!id;
-  showModal(`
-    <h3 style="margin:0 0 16px">${isEdit ? 'Редагувати' : 'Новий'} користувач</h3>
-    <div class="fr"><div class="fl">Email</div><input class="inp" type="email" id="u-email" value="${escapeHtml(u.email||'')}" style="width:100%" ${isEdit?'disabled':''}></div>
-    <div class="fr"><div class="fl">Ім'я</div><input class="inp" id="u-name" value="${escapeHtml(u.name||'')}" style="width:100%"></div>
-    <div class="fr"><div class="fl">Пароль ${isEdit?'(залишити порожнім, щоб не змінювати)':''}</div><input class="inp" type="password" id="u-pass" style="width:100%"></div>
-    <div class="fr"><div class="fl">Роль</div>
-      <select class="inp" id="u-role" style="width:100%" ${u.id===CURRENT_USER.id?'disabled':''}>
-        <option value="user" ${u.role!=='admin'?'selected':''}>user</option>
-        <option value="admin" ${u.role==='admin'?'selected':''}>admin</option>
-      </select>
-    </div>
-    <div class="fr">
-      <div class="fl">Дозволи (для user)</div>
-      <label style="display:block;margin:4px 0"><input type="checkbox" id="u-canAdd" ${u.canAdd?'checked':''}> Додавати транзакції</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox" id="u-canEdit" ${u.canEdit?'checked':''}> Редагувати</label>
-      <label style="display:block;margin:4px 0"><input type="checkbox" id="u-canDelete" ${u.canDelete?'checked':''}> Видаляти</label>
-    </div>
-    <div class="err" id="u-err"></div>
-    <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn" onclick="closeModal()" style="flex:1">Скасувати</button>
-      <button class="btn bp" onclick="saveUser(${id || 'null'})" style="flex:1">Зберегти</button>
-    </div>
-  `);
-}
-
-async function saveUser(id) {
-  const body = {
-    name: document.getElementById('u-name').value.trim(),
-    role: document.getElementById('u-role').value,
-    canAdd: document.getElementById('u-canAdd').checked,
-    canEdit: document.getElementById('u-canEdit').checked,
-    canDelete: document.getElementById('u-canDelete').checked
-  };
-  const pass = document.getElementById('u-pass').value;
-  const errEl = document.getElementById('u-err');
-  errEl.textContent = '';
-  try {
-    if (id) {
-      if (pass) body.password = pass;
-      const { user } = await api(`/api/users/${id}`, { method: 'PUT', body });
-      const idx = DB.users.findIndex(u => u.id === id);
-      if (idx >= 0) DB.users[idx] = user;
-    } else {
-      const email = document.getElementById('u-email').value.trim();
-      if (!email || !pass) { errEl.textContent = 'Email і пароль обов\'язкові'; return; }
-      const { user } = await api('/api/users', { method: 'POST', body: { email, password: pass, ...body } });
-      DB.users.push(user);
-    }
-    closeModal();
-    renderView();
-  } catch (e) { errEl.textContent = e.message; }
-}
-
-async function deleteUser(id) {
-  if (!confirm('Видалити користувача? Усі його сесії будуть припинені.')) return;
-  try {
-    await api(`/api/users/${id}`, { method: 'DELETE' });
-    DB.users = DB.users.filter(u => u.id !== id);
-    renderView();
-  } catch (e) { alert(e.message); }
-}
-
-// ── Import from Finmap ────────────────────────────────────
-let IMPORT_DATA = null; // { rows, mapped, summary }
-
-const FINMAP_INCOME_CATS = ['CPA', 'RevShare', 'Bonus', 'Hybrid', 'Flat', 'Категорії доходу'];
-
-function parseFinmapAccount(raw) {
-  if (!raw) return { team: '', site: '' };
-  const s = String(raw).trim();
-  const m = s.match(/^\(([^)]+)\)\s*(.+)$/);
-  if (m) return { team: m[1].trim(), site: m[2].trim().toLowerCase() };
-  return { team: '', site: s.toLowerCase() };
-}
-
-function toIsoDate(v) {
-  if (!v) return '';
-  if (v instanceof Date) return v.toISOString().slice(0, 10);
-  // SheetJS may return a number (Excel serial) or a string
-  if (typeof v === 'number') {
-    const d = XLSX.SSF.parse_date_code(v);
-    if (!d) return '';
-    return `${d.y.toString().padStart(4,'0')}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
-  }
-  const s = String(v).trim();
-  // try ISO-ish
-  const d = new Date(s);
-  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
-  return '';
-}
-
-function mapFinmapRow(row) {
-  // row is array of cells in order
-  const datePay = row[0], dateAccr = row[1];
-  const amountCo = row[5];
-  const fromAcc = row[6], toAcc = row[7];
-  const category = (row[8] || '').toString().trim();
-  const subcategory = (row[9] || '').toString().trim();
-  const counterparty = (row[10] || '').toString().trim();
-  const project = (row[12] || '').toString().trim();
-  const tags = (row[14] || '').toString().trim();
-  const comment = (row[15] || '').toString().trim();
-
-  if (amountCo == null || amountCo === '') return null;
-  const date = toIsoDate(datePay) || toIsoDate(dateAccr);
-  if (!date) return null;
-
-  const fromInfo = parseFinmapAccount(fromAcc);
-  const toInfo = parseFinmapAccount(toAcc);
-
-  // sign: incoming (only "На рахунок") = +; outgoing (only "З рахунку") = -; neither → use category
+// Map a single row → транзакція; повертає null, якщо не вдалось (немає дати чи суми)
+function _mapFinmapRow(row, idForTx){
+  const fr=pA(row['З рахунку']),to=pA(row['На рахунок']),tag=pT(row['Теги']);
+  const site=to.site||fr.site,team=to.team||fr.team||row['Проект']||null;
+  const isExpense=!!fr.site&&!to.site;
+  const isIncome =!!to.site&&!fr.site;
+  const amt=parseFloat(row['Сума в валюті компанії'])||0;
+  const cat=row['Категорія']||null;
+  // знак: за напрямом рахунку; якщо обидва порожні — за категорією
+  const incomeCats=['CPA','RevShare','Bonus','Hybrid','Flat','Категорії доходу'];
   let sign;
-  if (toAcc && !fromAcc) sign = +1;
-  else if (fromAcc && !toAcc) sign = -1;
-  else sign = FINMAP_INCOME_CATS.includes(category) ? +1 : -1;
-
-  const amount = sign * Math.abs(Number(amountCo) || 0);
-  // Site: prefer the "outside" account: outgoing → from; incoming → to
-  const site = sign < 0 ? fromInfo.site : toInfo.site;
-  const team = project || fromInfo.team || toInfo.team || '';
-  const description = [comment, subcategory && `(${subcategory})`, tags && `[${tags}]`].filter(Boolean).join(' ').trim();
-
-  return { date, amount, category, team, site, counterparty, tags, description };
+  if(isIncome) sign=+1;
+  else if(isExpense) sign=-1;
+  else sign=incomeCats.includes(cat)?+1:-1;
+  const amount=sign*Math.abs(amt);
+  const date=parseFmDate(row['Дата платежу'])||parseFmDate(row['Дата нарахування']);
+  if(!date||!amt) return null;
+  return{
+    id:idForTx,
+    date,
+    amount,
+    amtAccount:parseFloat(row['Сума в валюті рахунка'])||amt,
+    site,team,
+    category:(cat==='Категорії витрат'||cat==='Категорії доходу')?null:cat,
+    subcategory:row['Підкатегорія']||null,
+    seo:tag.handle,seoName:tag.name,fired:tag.fired,
+    project:row['Проект']||null,
+    subproject:row['Підпроект']||null,
+    contractor:row['Контрагент']||null,
+    subcontractor:row['Підконтрагент']||null,
+    tags:row['Теги']||null,
+    comment:row['Коментар']||null,
+    datePayment:parseFmDateTime(row['Дата платежу']),
+    dateAccrual:parseFmDateTime(row['Дата нарахування']),
+    periodFrom:parseFmDate(row['Період нарахування (дата "з")']),
+    periodTo:parseFmDate(row['Період нарахування (дата "по")']),
+    fromAccount:row['З рахунку']||null,
+    toAccount:row['На рахунок']||null,
+    deleted:false
+  };
 }
 
-// Split-row детектор:
-// рядок-частина має: дата=null, сума!=null, команда!=null, категорія=null, обидва рахунки=null
-function isFinmapSplit(r) {
-  return (r[0] == null) && (r[5] != null) && (r[12] != null && String(r[12]).trim() !== '')
-      && (r[6] == null || r[6] === '') && (r[7] == null || r[7] === '')
-      && (r[8] == null || String(r[8]).trim() === '');
-}
+function importRows(rows){
+  const sites={},seos={},txs=[],teamsSet=new Set(),catsIncome=new Set(),catsExpense=new Set();
+  let splitGroups=0,splitTxs=0;
 
-function collectEntities(t, newSites, newTeams, newCats) {
-  if (t.site && !DB.sites[t.site] && !newSites[t.site]) newSites[t.site] = { team: t.team };
-  if (t.team && !(DB.teams || []).includes(t.team)) newTeams.add(t.team);
-  if (t.category && !(DB.categories || []).includes(t.category)) newCats.add(t.category);
-}
-
-function parseFinmapWorkbook(wb) {
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const arr = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
-  if (!arr.length) return { rows: 0, mapped: [], skipped: 0, newSites: {}, newTeams: [], newCats: [], summary: {} };
-  let headerIdx = 0;
-  for (let i = 0; i < arr.length && i < 5; i++) {
-    if (arr[i] && arr[i].some(c => typeof c === 'string' && /Дата платежу/i.test(c))) { headerIdx = i; break; }
-  }
-  const dataRows = arr.slice(headerIdx + 1).filter(r => r && r.some(v => v != null && v !== ''));
-
-  // Group rows: each non-split row starts a group; subsequent split rows attach to it
-  const groups = [];
-  for (const row of dataRows) {
-    if (isFinmapSplit(row)) {
-      if (groups.length) groups[groups.length - 1].splits.push(row);
-      // якщо split йде без батьківського рядка — ігноруємо
+  // Перший прохід: групуємо рядки на (parent, splits[])
+  const groups=[];
+  for(const row of rows){
+    if(_isFinmapSplit(row)){
+      if(groups.length) groups[groups.length-1].splits.push(row);
+      // якщо нема parent — orphan, ігноруємо
     } else {
-      groups.push({ parent: row, splits: [] });
+      groups.push({parent:row,splits:[]});
     }
   }
 
-  const mapped = [];
-  let skipped = 0;
-  let splitGroups = 0, splitTxs = 0;
-  const newSites = {}, newTeams = new Set(), newCats = new Set();
+  // Помічник для збору сутностей з транзакції
+  function collect(tx, isExp){
+    if(tx.team) teamsSet.add(tx.team);
+    if(tx.category){
+      if(isExp) catsExpense.add(tx.category); else catsIncome.add(tx.category);
+    }
+    if(tx.site && tx.team && !sites[tx.site]) sites[tx.site]={team:tx.team,seo:tx.seo,seoName:tx.seoName};
+    if(tx.seo && !seos[tx.seo]) seos[tx.seo]={name:tx.seoName||tx.seo,team:tx.team};
+  }
 
-  for (const g of groups) {
-    const parentMapped = mapFinmapRow(g.parent);
-    if (g.splits.length === 0) {
-      if (parentMapped) {
-        mapped.push(parentMapped);
-        collectEntities(parentMapped, newSites, newTeams, newCats);
-      } else {
-        skipped++;
+  for(const g of groups){
+    const parentTx=_mapFinmapRow(g.parent, txs.length);
+    if(g.splits.length===0){
+      if(parentTx){
+        txs.push(parentTx);
+        collect(parentTx, parentTx.amount<0);
       }
       continue;
     }
-    // parent has splits — expand
-    if (!parentMapped) {
-      // якщо у parent немає дати — пропускаємо групу (раритетний випадок, бо ми бачили рядок 282 з датою)
-      skipped += 1 + g.splits.length;
-      continue;
-    }
+    // Маємо splits: parent розгортаємо у N окремих транзакцій
+    if(!parentTx) continue; // parent без дати/суми — пропускаємо групу повністю
     splitGroups++;
-    const sign = parentMapped.amount < 0 ? -1
-               : parentMapped.amount > 0 ? +1
-               : (FINMAP_INCOME_CATS.includes(parentMapped.category) ? +1 : -1);
-    for (const s of g.splits) {
-      const splitTeam = (s[12] || '').toString().trim();
-      const splitAmount = Math.abs(Number(s[5]) || 0);
-      if (!splitAmount) { skipped++; continue; }
-      const tx = {
-        ...parentMapped,
-        team: splitTeam,
-        amount: sign * splitAmount,
-        description: parentMapped.description
-          ? `${parentMapped.description} · split→${splitTeam}`
-          : `Split → ${splitTeam}`
+    // знак успадковуємо від parent
+    const sign = parentTx.amount<0 ? -1 : (parentTx.amount>0 ? +1 : 1);
+    for(const s of g.splits){
+      const splitTeam=String(s['Проект']||'').trim();
+      const splitAmt=Math.abs(parseFloat(s['Сума в валюті компанії'])||0);
+      if(!splitAmt) continue;
+      const tx={
+        ...parentTx,
+        id:txs.length,
+        team:splitTeam,
+        amount:sign*splitAmt,
+        amtAccount:splitAmt,
+        comment:(parentTx.comment?parentTx.comment+' · ':'')+'split→'+splitTeam,
+        splitOf:parentTx.date+'|'+parentTx.amount+'|'+(parentTx.site||'')+'|'+(parentTx.comment||'')
       };
-      mapped.push(tx);
-      collectEntities(tx, newSites, newTeams, newCats);
+      txs.push(tx);
+      collect(tx, tx.amount<0);
       splitTxs++;
     }
   }
-
-  const income = mapped.filter(t => t.amount > 0);
-  const expense = mapped.filter(t => t.amount < 0);
-  const totalIncome = income.reduce((s, t) => s + t.amount, 0);
-  const totalExpense = expense.reduce((s, t) => s + t.amount, 0);
-
-  return {
-    rows: dataRows.length,
-    mapped,
-    skipped,
-    newSites,
-    newTeams: [...newTeams],
-    newCats: [...newCats],
-    splitGroups, splitTxs,
-    summary: { total: mapped.length, income: income.length, expense: expense.length, totalIncome, totalExpense }
-  };
+  const teams=[...teamsSet].filter(t=>t!=='Архів Slot'&&t!=='Дівіденди');
+  return{sites,seos,transactions:txs,teams,catIncome:[...catsIncome].sort(),catExpense:[...catsExpense].sort(),splitGroups,splitTxs};
 }
-
-function renderImport() {
-  if (CURRENT_USER.role !== 'admin') return '<div class="cd">Доступ заборонено</div>';
-
-  if (!IMPORT_DATA) {
-    return `
-      <div class="cd">
-        <div style="font-weight:600;margin-bottom:6px">Імпорт з Finmap</div>
-        <div style="color:var(--t3);font-size:13px;margin-bottom:18px">
-          Завантажте .xlsx експорт з Finmap. Парсер витягне дату, суму, команду (Проект), категорію, сайт (з рахунку),
-          контрагента і коментар. Дублікати (за датою + сумою + сайтом + описом) пропустяться.
-        </div>
-        <input type="file" id="imp-file" accept=".xlsx,.xls" onchange="handleFinmapFile(event)" style="margin-bottom:14px">
-        <div id="imp-status" style="color:var(--t3);font-size:13px"></div>
-      </div>`;
-  }
-
-  const d = IMPORT_DATA;
-  const previewRows = d.mapped.slice(0, 12);
-  return `
-    <div class="cd" style="margin-bottom:14px">
-      <div style="font-weight:600;margin-bottom:14px">Готово до імпорту</div>
-      <div class="kpis">
-        <div class="kpi"><div class="l">Рядків у файлі</div><div class="v">${d.rows.toLocaleString()}</div></div>
-        <div class="kpi"><div class="l">Розпізнано</div><div class="v">${d.summary.total.toLocaleString()}</div></div>
-        <div class="kpi"><div class="l">Пропущено</div><div class="v">${d.skipped.toLocaleString()}</div></div>
-        <div class="kpi"><div class="l">Доходи</div><div class="v ap">${fmtMoney(d.summary.totalIncome)}</div></div>
-        <div class="kpi"><div class="l">Витрати</div><div class="v an">${fmtMoney(d.summary.totalExpense)}</div></div>
-        <div class="kpi"><div class="l">Чистий</div><div class="v ${d.summary.totalIncome+d.summary.totalExpense>=0?'ap':'an'}">${fmtMoney(d.summary.totalIncome+d.summary.totalExpense)}</div></div>
-      </div>
-      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">
-        <div style="flex:1;min-width:200px"><span style="color:var(--t3)">Нові сайти:</span> <b>${Object.keys(d.newSites).length}</b></div>
-        <div style="flex:1;min-width:200px"><span style="color:var(--t3)">Нові команди:</span> <b>${d.newTeams.length}</b> ${d.newTeams.length ? '— ' + d.newTeams.map(escapeHtml).join(', ') : ''}</div>
-        <div style="flex:1;min-width:200px"><span style="color:var(--t3)">Нові категорії:</span> <b>${d.newCats.length}</b> ${d.newCats.length ? '— ' + d.newCats.map(escapeHtml).join(', ') : ''}</div>
-      </div>
-      <div style="color:var(--t3);font-size:13px;margin-bottom:14px">
-        Розщеплених транзакцій: <b style="color:var(--t1)">${d.splitGroups || 0}</b> груп → <b style="color:var(--t1)">${d.splitTxs || 0}</b> окремих транзакцій по командах
-      </div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px">
-        <input type="checkbox" id="imp-dedupe" checked> Пропускати дублікати (дата + сума + сайт + опис)
-      </label>
-      <div style="display:flex;gap:8px">
-        <button class="btn" onclick="cancelImport()">Скасувати</button>
-        <button class="btn bp" onclick="confirmImport()" id="imp-go">Імпортувати ${d.summary.total.toLocaleString()} транзакцій</button>
-      </div>
-      <div class="err" id="imp-err"></div>
-    </div>
-    <div class="cd" style="padding:0">
-      <div style="padding:14px 18px;font-weight:600;border-bottom:1px solid var(--bd)">Перші ${previewRows.length} рядків</div>
-      <table class="tbl">
-        <thead><tr><th>Дата</th><th>Сума</th><th>Категорія</th><th>Команда</th><th>Сайт</th><th>Опис</th></tr></thead>
-        <tbody>
-          ${previewRows.map(t => `<tr>
-            <td>${fmtDate(t.date)}</td>
-            <td class="${t.amount>=0?'ap':'an'}" style="text-align:right">${fmtMoney(t.amount)}</td>
-            <td>${t.category ? `<span class="bc">${escapeHtml(t.category)}</span>` : '—'}</td>
-            <td>${t.team ? teamBadge(t.team) : '—'}</td>
-            <td style="font-size:12px;color:var(--t2)">${escapeHtml(t.site || '—')}</td>
-            <td style="font-size:12px;color:var(--t2);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t.description || '—')}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`;
-}
-
-function handleFinmapFile(ev) {
-  const file = ev.target.files?.[0];
-  if (!file) return;
-  const status = document.getElementById('imp-status');
-  status.textContent = 'Читаю файл...';
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      status.textContent = 'Парсю xlsx...';
-      const data = new Uint8Array(e.target.result);
-      const wb = XLSX.read(data, { type: 'array', cellDates: true });
-      status.textContent = 'Маплю на сутності...';
-      // Async to allow UI repaint
-      setTimeout(() => {
-        try {
-          IMPORT_DATA = parseFinmapWorkbook(wb);
-          renderView();
-        } catch (err) {
-          status.textContent = 'Помилка парсингу: ' + err.message;
-        }
-      }, 30);
-    } catch (err) {
-      status.textContent = 'Не вдалося прочитати файл: ' + err.message;
-    }
-  };
-  reader.onerror = () => { status.textContent = 'Помилка читання файлу'; };
-  reader.readAsArrayBuffer(file);
-}
-
-function cancelImport() {
-  IMPORT_DATA = null;
-  renderView();
-}
-
-async function confirmImport() {
-  if (!IMPORT_DATA) return;
-  const btn = document.getElementById('imp-go');
-  const err = document.getElementById('imp-err');
-  const dedupe = document.getElementById('imp-dedupe').checked;
-  err.textContent = '';
-  btn.disabled = true;
-  btn.textContent = 'Імпортую...';
-  try {
-    const body = {
-      transactions: IMPORT_DATA.mapped,
-      sites: IMPORT_DATA.newSites,
-      teams: IMPORT_DATA.newTeams,
-      categories: IMPORT_DATA.newCats,
-      dedupe
+function exportToXlsx(){
+  if(!window.XLSX){alert('XLSX бібліотека ще завантажується');return;}
+  const active=DB.transactions.filter(t=>!t.deleted);
+  const rows=active.map(t=>{
+    const isExp=t.amount<0;
+    const siteInfo=DB.sites[t.site];
+    const acctStr=t.site?(t.team?'('+t.team+') ':'')+t.site:'';
+    const seoInfo=t.seo?DB.seos[t.seo]:null;
+    const tagStr=t.tags||(t.team&&t.seo?(t.team+' @'+t.seo+(t.seoName&&t.seoName!==t.seo?' ('+t.seoName+')':'')):'');
+    return{
+      'Дата платежу':t.datePayment||t.date||'',
+      'Дата нарахування':t.dateAccrual||t.date||'',
+      'Період нарахування (дата "з")':t.periodFrom||'',
+      'Період нарахування (дата "по")':t.periodTo||'',
+      'Сума в валюті рахунка':t.amtAccount||Math.abs(t.amount),
+      'Сума в валюті компанії':Math.abs(t.amount),
+      'З рахунку':isExp?acctStr:(t.fromAccount||''),
+      'На рахунок':isExp?(t.toAccount||''):acctStr,
+      'Категорія':t.category||'',
+      'Підкатегорія':t.subcategory||'',
+      'Контрагент':t.contractor||'',
+      'Підконтрагент':t.subcontractor||'',
+      'Проект':t.project||t.team||'',
+      'Підпроект':t.subproject||'',
+      'Теги':tagStr,
+      'Коментар':t.comment||''
     };
-    const res = await api('/api/import', { method: 'POST', body });
-    err.style.color = 'var(--gn)';
-    err.textContent = `Готово: додано ${res.added}, пропущено ${res.skipped}, нових сайтів ${res.addedSites}, команд ${res.addedTeams}, категорій ${res.addedCats}`;
-    IMPORT_DATA = null;
-    await loadDB();
-    setTimeout(() => { setView('tx'); }, 1500);
-  } catch (e) {
-    err.style.color = 'var(--rd)';
-    err.textContent = 'Помилка: ' + e.message;
-    btn.disabled = false;
-    btn.textContent = 'Спробувати ще раз';
+  });
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Export');
+  // Auto-width columns
+  const cols=Object.keys(rows[0]||{}).map(k=>({wch:Math.max(k.length,12)}));
+  ws['!cols']=cols;
+  XLSX.writeFile(wb,'FinTrack_Export_'+today()+'.xlsx');
+}
+function exportToJson(){
+  const data=JSON.stringify(DB,null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='FinTrack_Backup_'+today()+'.json';
+  a.click();URL.revokeObjectURL(url);
+}
+
+let DB={sites:{},seos:{},transactions:[],users:[],teams:['Fortuna','Phoenix','Baza','Brand','Review'],catIncome:['Hybrid','RevShare','CPA','Flat','Bonus'],catExpense:['Domain','Links','Host','Content','Services','Other']};
+let VIEW='dash';
+const PAGE=40;
+let sitePage=1,txPage=1;
+let selSites=new Set();
+let expandedSites=new Map();
+let siteFilt={search:'',team:'',seo:''};
+let txState={period:'recent',type:'',cat:'',from:'',to:''};
+let dashTeamP='prev',dashCatP='prev';
+let selSeoH=null;
+let seoSitePeriod='prev';
+let analyticsP='prev';
+let analyticsFrom='',analyticsTo='';
+let analyticsExpTeams=new Set(),analyticsExpSeo=new Set();
+
+// User management
+let currentUser=null;
+let demoUser=null;
+
+function getTeams(){return DB.teams&&DB.teams.length?DB.teams:['Fortuna','Phoenix','Baza','Brand','Review'];}
+function getCurSym(){return DB.currency==='eur'?'€':'$';}
+function getRate(){return parseFloat(DB.eurRate)||1;}
+
+// ── Server API client ──────────────────────────────────────
+async function api(path, opts={}){
+  const res=await fetch(path,{credentials:'include',headers:{'Content-Type':'application/json'},...opts,body:opts.body?JSON.stringify(opts.body):undefined});
+  if(res.status===401){currentUser=null;DB={sites:{},seos:{},transactions:[],users:[]};render();updateUserSection();throw new Error('unauthenticated');}
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(data.error||'Помилка запиту');
+  return data;
+}
+
+// debounce save to /api/db (admin only). Saved within 500ms after last call.
+let _saveTimer=null,_savePending=false;
+function saveDB(){
+  // Skip if not admin or not initialized
+  if(!currentUser||currentUser.role!=='admin')return;
+  _savePending=true;
+  if(_saveTimer)clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(async()=>{
+    _saveTimer=null;
+    try{await api('/api/db',{method:'PUT',body:DB});}catch(e){console.warn('saveDB failed:',e.message);}
+    _savePending=false;
+  },500);
+}
+
+async function loadDBFromServer(){
+  const data=await api('/api/db');
+  DB=data;
+  // ensure required containers exist
+  DB.sites=DB.sites||{};DB.seos=DB.seos||{};DB.transactions=DB.transactions||[];
+  DB.users=DB.users||[];DB.teams=DB.teams||['Fortuna','Phoenix','Baza','Brand','Review'];
+  DB.catIncome=DB.catIncome||['Hybrid','RevShare','CPA','Flat','Bonus'];
+  DB.catExpense=DB.catExpense||['Domain','Links','Host','Content','Services','Other'];
+}
+
+function getActiveUser(){return demoUser||currentUser;}
+
+function applyUserFilter(data){
+  const activeUser=getActiveUser();
+  if(!activeUser||activeUser.role==='admin')return data;
+
+  const filtered=data.filter(item=>{
+    // Filter by teams
+    if(activeUser.teams&&activeUser.teams.length>0&&!activeUser.teams.includes(item.team))return false;
+    // Filter by categories (for transactions)
+    if(activeUser.categories&&activeUser.categories.length>0&&item.category&&!activeUser.categories.includes(item.category))return false;
+    // Filter by seos
+    if(activeUser.seos&&activeUser.seos.length>0&&item.seo&&!activeUser.seos.includes(item.seo))return false;
+    // Filter by sites
+    if(activeUser.sites&&activeUser.sites.length>0&&item.site&&!activeUser.sites.includes(item.site))return false;
+    return true;
+  });
+  return filtered;
+}
+
+function canAddTransactions(){
+  const u=getActiveUser();
+  return!u||u.role==='admin'||u.canAdd;
+}
+function canEditTransactions(){
+  const u=getActiveUser();
+  return!u||u.role==='admin'||u.canEdit;
+}
+function canDeleteTransactions(){
+  const u=getActiveUser();
+  return!u||u.role==='admin'||u.canDelete;
+}
+function canAccessAnalytics(){
+  const u=getActiveUser();
+  return!u||u.role==='admin'||u.canAnalytics!==false;
+}
+function canAccessImport(){
+  const u=getActiveUser();
+  return!u||u.role==='admin'||u.canImport;
+}
+
+async function logout(){
+  try{await api('/api/logout',{method:'POST'});}catch{}
+  currentUser=null;demoUser=null;
+  DB={sites:{},seos:{},transactions:[],users:[],teams:['Fortuna','Phoenix','Baza','Brand','Review']};
+  updateUserSection();
+  render();
+}
+
+function startDemo(userId){
+  const user=DB.users.find(u=>u.id===userId);
+  if(user)demoUser=user;
+  render();
+}
+
+function stopDemo(){
+  demoUser=null;
+  render();
+}
+
+function renderLogin(){
+  document.getElementById('content').innerHTML=`
+  <div style="display:flex;align-items:center;justify-content:center;height:100%;background:linear-gradient(135deg,var(--s1),var(--s2))">
+    <div class="cd" style="width:360px">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:32px;margin-bottom:8px">🔐</div>
+        <div style="font-size:20px;font-weight:600">FinTrack</div>
+        <div style="color:var(--t3);font-size:13px;margin-top:4px">Введіть облікові дані</div>
+      </div>
+      <div class="fr">
+        <div class="fl">Email</div>
+        <input class="inp" type="email" id="login-email" placeholder="user@example.com" style="width:100%">
+      </div>
+      <div class="fr">
+        <div class="fl">Пароль</div>
+        <input class="inp" type="password" id="login-password" placeholder="••••••••" style="width:100%" onkeypress="if(event.key==='Enter')handleLogin()">
+      </div>
+      <button class="btn bp" style="width:100%;margin-top:16px" onclick="handleLogin()">Вхід</button>
+      <div id="login-error" style="color:var(--rd);font-size:13px;margin-top:12px;text-align:center"></div>
+    </div>
+  </div>`;
+  setTimeout(()=>document.getElementById('login-email').focus(),50);
+}
+
+async function handleLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const password=document.getElementById('login-password').value;
+  const errEl=document.getElementById('login-error');
+  errEl.textContent='';
+  try{
+    const{user}=await api('/api/login',{method:'POST',body:{email,password}});
+    currentUser=user;
+    demoUser=null;
+    await loadDBFromServer();
+    VIEW='dash';
+    ub();render();updateUserSection();
+  }catch(e){
+    errEl.textContent=e.message||'Невірні облікові дані';
   }
 }
 
-// ── Settings ──────────────────────────────────────────────
-function renderSettings() {
-  const isAdmin = CURRENT_USER.role === 'admin';
-  return `
-    <div class="cd" style="margin-bottom:14px">
-      <div style="font-weight:600;margin-bottom:14px">Зміна пароля</div>
-      <div class="fr"><div class="fl">Поточний пароль</div><input class="inp" type="password" id="cp-old" style="width:100%"></div>
-      <div class="fr"><div class="fl">Новий пароль</div><input class="inp" type="password" id="cp-new" style="width:100%"></div>
-      <button class="btn bp" onclick="changePassword()">Змінити пароль</button>
-      <div class="err" id="cp-err"></div>
-    </div>
-    ${isAdmin ? `
+function sv(v){
+  VIEW=v;document.querySelectorAll('.ni').forEach(el=>el.classList.remove('a'));
+  const el=document.getElementById('nav-'+v);if(el)el.classList.add('a');
+  const titles={dash:'Огляд',sites:'Сайти',tx:'Транзакції',analytics:'Аналітика',settings:'Налаштування',import:'Імпорт з Finmap'};
+  document.getElementById('page-title').textContent=titles[v]||v;
+  render();
+}
+function ub(){
+  const active=applyUserFilter(DB.transactions.filter(t=>!t.deleted));
+  document.getElementById('nb-sites').textContent=Object.keys(DB.sites).length.toLocaleString();
+  document.getElementById('nb-tx').textContent=active.length.toLocaleString();
+}
+function tbadge(t){
+  if(!t)return'<span style="color:var(--t3)">Видалена команда</span>';
+  const tc={Fortuna:'tF',Phoenix:'tP',Baza:'tB',Brand:'tBr',Review:'tR'};
+  const cls=tc[t]||'';
+  return`<span class="bt ${cls}">${t}</span>`;
+}
+function cbadge(c){return c?`<span class="bc">${c}</span>`:'—';}
+function chk(ch,fn){return`<div class="cb ${ch?'c':''}" onclick="${fn}">${ch?'✓':''}</div>`;}
+function bH(v){const s=getCurSym();return v>=0?`<span class="ap">${s}${v.toFixed(2)}</span>`:`<span class="an">-${s}${Math.abs(v).toFixed(2)}</span>`;}
+function aH(v){const s=getCurSym();return v>=0?`<span class="ap">+${s}${v.toFixed(2)}</span>`:`<span class="an">-${s}${Math.abs(v).toFixed(2)}</span>`;}
+function txAmtDisplay(t){
+  // Always show in $ (amounts stored internally in USD)
+  return aH(t.amount);
+}
+function pgr(total,page,fn,px){
+  if(total<=PAGE)return'';
+  const tp=Math.ceil(total/PAGE),pages=[];
+  for(let i=Math.max(1,page-2);i<=Math.min(tp,page+2);i++)pages.push(i);
+  return`<div class="pb"><button class="pbt" onclick="${fn}(1)">«</button><button class="pbt" onclick="${fn}(Math.max(1,${px}Page-1))">‹</button>${pages.map(p=>`<button class="pbt ${p===page?'a':''}" onclick="${fn}(${p})">${p}</button>`).join('')}<button class="pbt" onclick="${fn}(Math.min(${tp},${px}Page+1))">›</button><button class="pbt" onclick="${fn}(${tp})">»</button><span class="pi">${total.toLocaleString()} записів</span></div>`;
+}
+function esc(s){return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+
+// ── DASHBOARD ──
+function renderDash(){
+  const{sites,seos,transactions}=DB;
+  const active=applyUserFilter(transactions.filter(t=>!t.deleted));
+  const totalBal=active.reduce((s,t)=>s+t.amount,0);
+  const{from:tF,to:tT}=periodDates(dashTeamP);
+  const byTeam={};
+  for(const t of active){if(!t.team||!inP(t.date,tF,tT))continue;if(!byTeam[t.team])byTeam[t.team]={bal:0,cnt:0};byTeam[t.team].bal+=t.amount;byTeam[t.team].cnt++;}
+  const teams=Object.entries(byTeam).sort((a,b)=>b[1].bal-a[1].bal);
+  const maxB=Math.max(...Object.values(byTeam).map(i=>Math.abs(i.bal)),1);
+  const{from:cF,to:cT}=periodDates(dashCatP);
+  const byCat={};
+  for(const t of active){if(t.category&&inP(t.date,cF,cT))byCat[t.category]=(byCat[t.category]||0)+t.amount;}
+  const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const cutoff=daysAgo(30);
+  const recent=active.filter(t=>t.date&&t.date>=cutoff).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const deleted=transactions.filter(t=>t.deleted&&t.date&&t.date>=cutoff).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const pills=[{k:'prev',l:'Попер. місяць'},{k:'cur',l:'Поточний місяць'},{k:'year',l:'Цей рік'}];
+
+  document.getElementById('content').innerHTML=`
+  <div class="sg">
+    <div class="sc"><div class="sl">Всього сайтів</div><div class="sv">${Object.keys(sites).length.toLocaleString()}</div></div>
+    <div class="sc"><div class="sl">Загальний баланс</div><div class="sv" style="font-size:22px">${bH(totalBal)}</div></div>
+    <div class="sc"><div class="sl">SEO-спеціалістів</div><div class="sv">${Object.keys(seos).length}</div></div>
+    <div class="sc"><div class="sl">Команд</div><div class="sv">${TEAMS.length}</div></div>
+    <div class="sc"><div class="sl">Користувачів</div><div class="sv">${Object.keys(seos).length}</div></div>
+  </div>
+  <div class="tc2" style="margin-bottom:20px">
     <div class="cd">
-      <div style="font-weight:600;margin-bottom:14px">Налаштування системи</div>
-      <div class="fr"><div class="fl">Валюта</div>
-        <select class="inp" id="cur-sel" style="width:200px" onchange="DB.currency=this.value;saveDB().then(renderView)">
-          <option value="USD" ${DB.currency==='USD'?'selected':''}>USD ($)</option>
-          <option value="EUR" ${DB.currency==='EUR'?'selected':''}>EUR (€)</option>
-          <option value="UAH" ${DB.currency==='UAH'?'selected':''}>UAH (₴)</option>
+      <div class="sh"><div class="st">Баланс по командах</div><div class="dpp">${pills.map(p=>`<button class="dp ${dashTeamP===p.k?'a':''}" onclick="dashTeamP='${p.k}';renderDash()">${p.l}</button>`).join('')}</div></div>
+      ${teams.length===0?'<div style="color:var(--t3);font-size:13px">Немає даних</div>':
+        teams.map(([t,i])=>`<div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">${tbadge(t)}<div style="display:flex;gap:14px;align-items:center"><span style="color:var(--t3);font-size:12px;font-family:var(--fm)">${i.cnt} транз.</span>${bH(i.bal)}</div></div>
+          <div class="pb2"><div class="pf" style="width:${(Math.abs(i.bal)/maxB*100).toFixed(1)}%;background:${i.bal>=0?'var(--ac)':'var(--rd)'}"></div></div>
+        </div>`).join('')}
+    </div>
+    <div class="cd">
+      <div class="sh"><div class="st">Баланс по категоріях</div><div class="dpp">${pills.map(p=>`<button class="dp ${dashCatP===p.k?'a':''}" onclick="dashCatP='${p.k}';renderDash()">${p.l}</button>`).join('')}</div></div>
+      ${cats.length===0?'<div style="color:var(--t3);font-size:13px">Немає даних</div>':cats.map(([c,a])=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">${cbadge(c)}${bH(a)}</div>`).join('')}
+    </div>
+  </div>
+  <div class="cd" style="margin-bottom:20px;padding:0;overflow:hidden">
+    <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--b1)"><div class="st">Останні транзакції</div><span style="font-size:12px;color:var(--t3)">Баланс: ${bH(recent.slice(0,30).reduce((s,t)=>s+t.amount,0))}</span></div>
+    ${recent.length===0?'<div style="color:var(--t3);text-align:center;padding:20px">Немає транзакцій</div>':
+    `<table><thead><tr><th>Дата</th><th>Сайт</th><th>Команда</th><th>SEO</th><th>Категорія</th><th>Тип</th><th>Коментар</th><th style="text-align:right">Сума</th><th></th></tr></thead>
+    <tbody>${renderTxRows(recent.slice(0,30))}</tbody></table>`}
+  </div>
+  <div class="cd" style="padding:0;overflow:hidden">
+    <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--b1)"><div class="st" style="color:var(--rd)">🗑 Останні видалені</div><span style="font-size:12px;color:var(--t3)">${deleted.length} всього</span></div>
+    ${deleted.length===0?'<div style="color:var(--t3);text-align:center;padding:20px">Немає видалених</div>':
+    `<table><thead><tr><th>Дата</th><th>Сайт</th><th>Команда</th><th>Категорія</th><th style="text-align:right">Сума</th></tr></thead>
+    <tbody>${deleted.slice(0,15).map(t=>`<tr class="del-row"><td class="fm" style="font-size:12px">${t.date}</td><td style="font-size:13px;font-family:var(--fm)">${t.site||'Видалений сайт'}</td><td>${tbadge(t.team)}</td><td>${cbadge(t.category)}</td><td style="text-align:right">${aH(t.amount)}</td></tr>`).join('')}</tbody></table>`}
+  </div>`;
+}
+
+// ── ANALYTICS (P&L) ──
+function getAnalyticsData(from, to){
+  const active=applyUserFilter(DB.transactions.filter(t=>!t.deleted));
+  const filtered=active.filter(t=>{
+    if(from&&t.date<from)return false;
+    if(to&&t.date>to)return false;
+    return true;
+  });
+  const byTeam={};
+  const bySeo={};
+  const bySite={};
+  const byCat={income:{},expense:{}};
+
+  for(const t of filtered){
+    const team=t.team||'Unknown';
+    const seo=t.seo||'Unknown';
+    const site=t.site||'Unknown';
+    const cat=t.category||'Other';
+    const isIncome=t.amount>=0;
+
+    if(!byTeam[team])byTeam[team]={income:0,expense:0,sites:{},seos:{}};
+    if(!bySeo[seo])bySeo[seo]={income:0,expense:0,sites:{},team};
+    if(!bySite[site])bySite[site]={income:0,expense:0,team,seo};
+
+    if(isIncome){
+      byTeam[team].income+=t.amount;
+      bySeo[seo].income+=t.amount;
+      bySite[site].income+=t.amount;
+      if(!byCat.income[cat])byCat.income[cat]=0;
+      byCat.income[cat]+=t.amount;
+    } else {
+      byTeam[team].expense+=t.amount;
+      bySeo[seo].expense+=t.amount;
+      bySite[site].expense+=t.amount;
+      if(!byCat.expense[cat])byCat.expense[cat]=0;
+      byCat.expense[cat]+=t.amount;
+    }
+
+    if(!byTeam[team].seos[seo])byTeam[team].seos[seo]={income:0,expense:0,sites:new Set()};
+    byTeam[team].seos[seo].income+=(isIncome?t.amount:0);
+    byTeam[team].seos[seo].expense+=(isIncome?0:t.amount);
+    byTeam[team].seos[seo].sites.add(site);
+
+    if(!byTeam[team].sites)byTeam[team].sites={};
+    if(!byTeam[team].sites[site])byTeam[team].sites[site]={income:0,expense:0};
+    byTeam[team].sites[site].income+=(isIncome?t.amount:0);
+    byTeam[team].sites[site].expense+=(isIncome?0:t.amount);
+
+    if(!bySeo[seo].sites[site])bySeo[seo].sites[site]={income:0,expense:0};
+    bySeo[seo].sites[site].income+=(isIncome?t.amount:0);
+    bySeo[seo].sites[site].expense+=(isIncome?0:t.amount);
+    bySite[site].seo=seo;
+  }
+
+  let totalIncome=0,totalExpense=0;
+  for(const t of filtered){
+    if(t.amount>=0)totalIncome+=t.amount;
+    else totalExpense+=t.amount;
+  }
+
+  const topSites=Object.entries(bySite).map(([site,data])=>{
+    const profit=data.income+data.expense;
+    return{site,team:data.team,seo:data.seo,income:data.income,expense:data.expense,profit};
+  }).sort((a,b)=>b.profit-a.profit).slice(0,5);
+
+  const topSeo=Object.entries(bySeo).map(([seoH,data])=>{
+    const profit=data.income+data.expense;
+    const sitesCount=Object.keys(data.sites).length;
+    return{seo:seoH,team:data.team,sitesCount,income:data.income,expense:data.expense,profit};
+  }).sort((a,b)=>b.profit-a.profit).slice(0,5);
+
+  return{
+    total:{income:totalIncome,expense:totalExpense,profit:totalIncome+totalExpense},
+    byTeam,bySeo,bySite,topSites,topSeo,byCat
+  };
+}
+
+function renderAnalytics(){
+  const{from:pF,to:pT}=analyticsP==='custom'?{from:analyticsFrom,to:analyticsTo}:periodDates(analyticsP==='all'?'':analyticsP);
+  const data=getAnalyticsData(pF,pT);
+  const{total,byTeam,topSites,topSeo,byCat}=data;
+  const margin=total.income>0?(total.profit/total.income*100):0;
+  const pills=[{k:'prev',l:'Попер. місяць'},{k:'cur',l:'Поточний місяць'},{k:'year',l:'Цей рік'},{k:'all',l:'Весь час'},{k:'custom',l:'Вибрати дати'}];
+  const s=getCurSym();
+
+  const periodSel=`<div class="prow">${pills.map(p=>`<button class="pp ${analyticsP===p.k?'a':''}" onclick="analyticsP='${p.k}';analyticsExpTeams=new Set();analyticsExpSeo=new Set();renderAnalytics()">${p.l}</button>`).join('')}</div>
+    ${analyticsP==='custom'?`<div class="exp-daterow">
+      ${cdpTrigger('an-from','Від',analyticsFrom,"function(v){analyticsFrom=v;renderAnalytics()}")}
+      ${cdpTrigger('an-to','До',analyticsTo,"function(v){analyticsTo=v;renderAnalytics()}")}
+    </div>`:''}`;
+
+  const teamTableRows=Object.entries(byTeam).sort((a,b)=>(b[1].income+b[1].expense)-(a[1].income+a[1].expense)).map(([tname,tdata])=>{
+    const tProfit=tdata.income+tdata.expense;
+    const tMargin=tdata.income>0?(tProfit/tdata.income*100):0;
+    const tRoi=Math.abs(tdata.expense)>0?(tProfit/(Math.abs(tdata.expense))*100):0;
+    const isExp=analyticsExpTeams.has(tname);
+    const rows=[`<tr class="sr ${isExp?'exp':''}" onclick="analyticsExpTeams.has('${tname}')?analyticsExpTeams.delete('${tname}'):analyticsExpTeams.add('${tname}');renderAnalytics()">
+      <td><span class="chevron ${isExp?'open':''}" style="margin-right:8px">›</span>${tbadge(tname)}</td>
+      <td style="text-align:right" class="fm">${s}${tdata.income.toFixed(2)}</td>
+      <td style="text-align:right" class="fm">${s}${Math.abs(tdata.expense).toFixed(2)}</td>
+      <td style="text-align:right" class="fm">${tProfit>=0?'<span class="ap">':'<span class="an">'}${s}${Math.abs(tProfit).toFixed(2)}</span></td>
+      <td style="text-align:right" class="fm">${tMargin.toFixed(1)}%</td>
+      <td style="text-align:right" class="fm">${tRoi.toFixed(1)}%</td>
+    </tr>`];
+
+    if(isExp){
+      const seoEntries=Object.entries(tdata.seos||{}).sort((a,b)=>(b[1].income+b[1].expense)-(a[1].income+a[1].expense));
+      seoEntries.forEach(([seoH,seoData])=>{
+        const sProfit=seoData.income+seoData.expense;
+        const sMargin=seoData.income>0?(sProfit/seoData.income*100):0;
+        const sRoi=Math.abs(seoData.expense)>0?(sProfit/Math.abs(seoData.expense)*100):0;
+        const isSeoExp=analyticsExpSeo.has(seoH);
+        rows.push(`<tr class="sr ${isSeoExp?'exp':''}" onclick="event.stopPropagation();analyticsExpSeo.has('${seoH}')?analyticsExpSeo.delete('${seoH}'):analyticsExpSeo.add('${seoH}');renderAnalytics()" style="background:rgba(0,229,160,0.05)">
+          <td style="padding-left:40px"><span class="chevron ${isSeoExp?'open':''}" style="margin-right:8px">›</span>@${seoH}</td>
+          <td style="text-align:right" class="fm">${s}${seoData.income.toFixed(2)}</td>
+          <td style="text-align:right" class="fm">${s}${Math.abs(seoData.expense).toFixed(2)}</td>
+          <td style="text-align:right" class="fm">${sProfit>=0?'<span class="ap">':'<span class="an">'}${s}${Math.abs(sProfit).toFixed(2)}</span></td>
+          <td style="text-align:right" class="fm">${sMargin.toFixed(1)}%</td>
+          <td style="text-align:right" class="fm">${sRoi.toFixed(1)}%</td>
+        </tr>`);
+
+        if(isSeoExp){
+          const siteEntries=Object.entries(tdata.sites||{}).filter(([site])=>seoData.sites.has(site)).sort((a,b)=>(b[1].income+b[1].expense)-(a[1].income+a[1].expense));
+          siteEntries.forEach(([site,siteData])=>{
+            const siProfit=siteData.income+siteData.expense;
+            const siMargin=siteData.income>0?(siProfit/siteData.income*100):0;
+            const siRoi=Math.abs(siteData.expense)>0?(siProfit/Math.abs(siteData.expense)*100):0;
+            rows.push(`<tr style="background:rgba(0,229,160,0.08)">
+              <td style="padding-left:60px">${site}</td>
+              <td style="text-align:right" class="fm">${s}${siteData.income.toFixed(2)}</td>
+              <td style="text-align:right" class="fm">${s}${Math.abs(siteData.expense).toFixed(2)}</td>
+              <td style="text-align:right" class="fm">${siProfit>=0?'<span class="ap">':'<span class="an">'}${s}${Math.abs(siProfit).toFixed(2)}</span></td>
+              <td style="text-align:right" class="fm">${siMargin.toFixed(1)}%</td>
+              <td style="text-align:right" class="fm">${siRoi.toFixed(1)}%</td>
+            </tr>`);
+          });
+        }
+      });
+    }
+
+    return rows.join('');
+  }).join('');
+
+  const incCats=Object.entries(byCat.income||{}).sort((a,b)=>b[1]-a[1]);
+  const expCats=Object.entries(byCat.expense||{}).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
+  const maxInc=Math.max(...incCats.map(c=>c[1]),1);
+  const maxExp=Math.max(...expCats.map(c=>Math.abs(c[1])),1);
+
+  document.getElementById('content').innerHTML=`
+  <div class="cd" style="margin-bottom:20px">
+    <div class="sh"><div class="st">Період</div></div>
+    ${periodSel}
+  </div>
+
+  <div class="sg">
+    <div class="sc"><div class="sl">Загальний дохід</div><div class="sv ap">${s}${total.income.toFixed(2)}</div></div>
+    <div class="sc"><div class="sl">Загальні витрати</div><div class="sv an">${s}${Math.abs(total.expense).toFixed(2)}</div></div>
+    <div class="sc"><div class="sl">Прибуток (P&L)</div><div class="sv ${total.profit>=0?'ap':'an'}">${s}${Math.abs(total.profit).toFixed(2)}</div></div>
+    <div class="sc"><div class="sl">Маржинальність</div><div class="sv">${margin.toFixed(1)}%</div></div>
+  </div>
+
+  <div class="cd" style="margin-bottom:20px;padding:0;overflow:hidden">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--b1)"><div class="st">P&L по командам і SEO</div></div>
+    <table style="font-size:13px"><thead><tr>
+      <th>Команда/SEO/Сайт</th>
+      <th style="text-align:right">Дохід</th>
+      <th style="text-align:right">Витрати</th>
+      <th style="text-align:right">Прибуток</th>
+      <th style="text-align:right">Маржа %</th>
+      <th style="text-align:right">ROI %</th>
+    </tr></thead>
+    <tbody>${teamTableRows}</tbody>
+    </table>
+  </div>
+
+  <div class="tc2" style="margin-bottom:20px">
+    <div class="cd" style="padding:0;overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--b1)"><div class="st">ТОП-5 Сайтів за прибутком</div></div>
+      <table style="font-size:13px"><thead><tr>
+        <th>Сайт</th><th>Команда</th><th style="text-align:right">Дохід</th><th style="text-align:right">Витрати</th><th style="text-align:right">Прибуток</th>
+      </tr></thead>
+      <tbody>${topSites.length===0?'<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--t3)">Немає даних</td></tr>':
+      topSites.map(x=>`<tr>
+        <td class="fm" style="font-size:12px">${x.site}</td>
+        <td>${tbadge(x.team)}</td>
+        <td style="text-align:right" class="fm">${s}${x.income.toFixed(2)}</td>
+        <td style="text-align:right" class="fm">${s}${Math.abs(x.expense).toFixed(2)}</td>
+        <td style="text-align:right" class="fm">${x.profit>=0?'<span class="ap">':'<span class="an">'}${s}${Math.abs(x.profit).toFixed(2)}</span></td>
+      </tr>`).join('')}
+      </tbody></table>
+    </div>
+
+    <div class="cd" style="padding:0;overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--b1)"><div class="st">ТОП-5 SEO за прибутком</div></div>
+      <table style="font-size:13px"><thead><tr>
+        <th>SEO</th><th>Команда</th><th style="text-align:right">Сайтів</th><th style="text-align:right">Дохід</th><th style="text-align:right">Витрати</th><th style="text-align:right">Прибуток</th>
+      </tr></thead>
+      <tbody>${topSeo.length===0?'<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--t3)">Немає даних</td></tr>':
+      topSeo.map(x=>`<tr>
+        <td class="fm" style="font-size:12px">@${x.seo}</td>
+        <td>${tbadge(x.team)}</td>
+        <td style="text-align:center" class="fm">${x.sitesCount}</td>
+        <td style="text-align:right" class="fm">${s}${x.income.toFixed(2)}</td>
+        <td style="text-align:right" class="fm">${s}${Math.abs(x.expense).toFixed(2)}</td>
+        <td style="text-align:right" class="fm">${x.profit>=0?'<span class="ap">':'<span class="an">'}${s}${Math.abs(x.profit).toFixed(2)}</span></td>
+      </tr>`).join('')}
+      </tbody></table>
+    </div>
+  </div>
+
+  <div class="tc2">
+    <div class="cd">
+      <div class="sh"><div class="st">Дохід по категоріях</div></div>
+      ${incCats.length===0?'<div style="color:var(--t3);font-size:13px">Немає даних</div>':
+      incCats.map(([cat,amt])=>`<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">${cbadge(cat)}<span class="fm ap">${s}${amt.toFixed(2)}</span></div>
+        <div class="pb2"><div class="pf" style="width:${(amt/maxInc*100).toFixed(1)}%;background:var(--ac)"></div></div>
+      </div>`).join('')}
+    </div>
+
+    <div class="cd">
+      <div class="sh"><div class="st">Витрати по категоріях</div></div>
+      ${expCats.length===0?'<div style="color:var(--t3);font-size:13px">Немає даних</div>':
+      expCats.map(([cat,amt])=>`<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">${cbadge(cat)}<span class="fm an">${s}${Math.abs(amt).toFixed(2)}</span></div>
+        <div class="pb2"><div class="pf" style="width:${(Math.abs(amt)/maxExp*100).toFixed(1)}%;background:var(--rd)"></div></div>
+      </div>`).join('')}
+    </div>
+  </div>
+  `;
+  if(analyticsP==='custom'){
+    if(!analyticsFrom){setTimeout(()=>{const el=document.getElementById('an-from');if(el)el.click();},100);}
+  }
+}
+
+// ── EXPANDED SITE ──
+let selExpTx=new Set();
+function toggleExpTx(id){selExpTx.has(id)?selExpTx.delete(id):selExpTx.add(id);renderSites();}
+function toggleAllExpTx(domain){
+  const allTx=DB.transactions.filter(t=>t.site===domain&&!t.deleted);
+  const f=getF(domain);const filt=filtTx(allTx,f);
+  const allSel=filt.every(t=>selExpTx.has(t.id));
+  filt.forEach(t=>allSel?selExpTx.delete(t.id):selExpTx.add(t.id));
+  renderSites();
+}
+function showBulkExpTx(type){
+  const teams=getTeams().slice().sort();
+  showModal(`<div class="md" onclick="event.stopPropagation()"><div class="mdt">Масова зміна — ${selExpTx.size} транзакцій</div>
+    ${type==='team'?`<div class="fr"><div class="fl">Нова команда</div><select class="inp" id="bv-exp"><option value="">Виберіть</option>${teams.map(t=>`<option value="${t}">${t}</option>`).join('')}</select></div>`
+    :`<div class="fr"><div class="fl">Новий SEO</div><select class="inp" id="bv-exp"><option value="">Виберіть</option>${Object.entries(DB.seos).map(([h,s])=>`<option value="${h}">@${h} — ${s.name}</option>`).join('')}</select></div>`}
+    <div class="ma"><button class="btn bg" onclick="closeModal()">Скасувати</button><button class="btn bp" onclick="applyBulkExpTx('${type}')">✓ Застосувати</button></div></div>`);
+}
+function applyBulkExpTx(type){
+  const val=document.getElementById('bv-exp').value;if(!val)return;
+  for(const id of selExpTx){
+    const t=DB.transactions.find(x=>x.id===id);if(!t)continue;
+    if(type==='team')t.team=val;
+    else{t.seo=val;t.seoName=DB.seos[val]?.name||val;}
+  }
+  saveDB();selExpTx=new Set();closeModal();renderSites();ub();
+}
+function getF(d){return expandedSites.get(d)||{period:'all',cat:'',type:'',from:'',to:''};}
+function filtTx(txs,f){
+  let from=f.from,to=f.to;
+  if(f.period!=='custom'){const pd=periodDates(f.period==='all'?'':f.period);from=pd.from;to=pd.to;}
+  return txs.filter(t=>{
+    if(t.deleted)return false;
+    if(f.type==='income'&&t.amount<0)return false;
+    if(f.type==='expense'&&t.amount>=0)return false;
+    if(f.cat&&t.category!==f.cat)return false;
+    if(from&&t.date<from)return false;
+    if(to&&t.date>to)return false;
+    return true;
+  }).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+}
+
+function renderSiteExp(domain){
+  const f=getF(domain);
+  const allTx=DB.transactions.filter(t=>t.site===domain&&!t.deleted);
+  const iC=new Set(allTx.filter(t=>t.amount>=0&&t.category).map(t=>t.category));
+  const eC=new Set(allTx.filter(t=>t.amount<0&&t.category).map(t=>t.category));
+  const allCats=[...new Set(allTx.map(t=>t.category).filter(Boolean))].sort();
+  const avail=f.type==='income'?iC:f.type==='expense'?eC:new Set([...iC,...eC]);
+  const filt=filtTx(allTx,f);
+  const bal=filt.reduce((s,t)=>s+t.amount,0);
+  const inc=filt.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0);
+  const exp=filt.filter(t=>t.amount<0).reduce((s,t)=>s+t.amount,0);
+  const d=esc(domain);
+  const periods=[{k:'cur',l:'Цей місяць'},{k:'prev',l:'Попер. місяць'},{k:'year',l:'Цей рік'},{k:'all',l:'Весь час'},{k:'custom',l:'Вибрати дати'}];
+  return`<tr><td colspan="7" style="padding:0;border-bottom:1px solid var(--b1)"><div class="exp-wrap">
+    <div class="prow">${periods.map(p=>`<button class="pp ${f.period===p.k?'a':''}" onclick="setF('${d}','period','${p.k}')">${p.l}</button>`).join('')}</div>
+    ${f.period==='custom'?`<div class="exp-daterow">
+      ${cdpTrigger('exp-from-'+d,'Від',f.from,"function(v){setF('"+d+"','from',v)}")}
+      ${cdpTrigger('exp-to-'+d,'До',f.to,"function(v){setF('"+d+"','to',v)}")}
+    </div>`:''}
+    <div class="exp-row">
+      <button class="tp ${!f.type?'a-all':''}" onclick="setF('${d}','type','')">Всі</button>
+      <button class="tp tp-in ${f.type==='income'?'a-in':''}" onclick="setF('${d}','type','income')">↑ Дохід</button>
+      <button class="tp tp-out ${f.type==='expense'?'a-out':''}" onclick="setF('${d}','type','expense')">↓ Витрата</button>
+    </div>
+    <div class="exp-cats"><span style="font-size:11px;color:var(--t3);margin-right:4px;text-transform:uppercase;letter-spacing:.5px;font-weight:600">Кат:</span>
+      <button class="cat-btn ${!f.cat?'a':''}" onclick="setF('${d}','cat','')">Всі</button>
+      ${allCats.map(c=>`<button class="cat-btn ${f.cat===c?'a':''} ${!avail.has(c)?'dis':''}" onclick="${avail.has(c)?`setF('${d}','cat','${esc(c)}')`:''}"">${c}</button>`).join('')}
+    </div>
+    <div class="exp-sum">
+      <span style="color:var(--t3);font-size:13px">${filt.length} з ${allTx.length}</span><span style="color:var(--t3)">·</span>
+      <span>Баланс: <strong>${bH(bal)}</strong></span>
+      <span style="color:var(--t3);font-size:12px">↑ <span style="color:var(--ac)">$${inc.toFixed(2)}</span></span>
+      ${exp<0?`<span style="color:var(--t3);font-size:12px">↓ <span style="color:var(--rd)">$${Math.abs(exp).toFixed(2)}</span></span>`:''}
+    </div>
+    ${(()=>{const selCount=filt.filter(t=>selExpTx.has(t.id)).length;return selCount>0?`<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--acd);border-bottom:1px solid var(--b2)"><span style="color:var(--ac);font-family:var(--fm);font-weight:600">${selCount}</span><span style="color:var(--t2);font-size:13px">вибрано</span><button class="btn bg bs" onclick="showBulkExpTx('team')">↔ Команду</button><button class="btn bg bs" onclick="showBulkExpTx('seo')">👤 SEO</button><button class="btn bg bs" style="margin-left:auto" onclick="selExpTx=new Set();renderSites()">Зняти</button></div>`:''})()}
+    <table class="exp-tbl"><thead><tr>
+      <th style="padding:8px 16px;font-size:10px;width:30px">${chk(filt.length>0&&filt.every(t=>selExpTx.has(t.id)),"event.stopPropagation();toggleAllExpTx('"+d+"')")}</th>
+      <th style="padding:8px 16px;font-size:10px">Дата</th><th style="padding:8px 16px;font-size:10px">Команда</th><th style="padding:8px 16px;font-size:10px">Тип</th>
+      <th style="padding:8px 16px;font-size:10px">Категорія</th><th style="padding:8px 16px;font-size:10px">SEO</th>
+      <th style="padding:8px 16px;font-size:10px">Коментар</th><th style="padding:8px 16px;font-size:10px;text-align:right">Сума</th>
+      <th style="padding:8px 16px;font-size:10px"></th>
+    </tr></thead><tbody>
+    ${filt.slice(0,60).map(t=>`<tr>
+      <td onclick="event.stopPropagation()">${chk(selExpTx.has(t.id),"event.stopPropagation();toggleExpTx("+t.id+")")}</td>
+      <td class="fm" style="color:var(--t3);white-space:nowrap">${t.date||'—'}</td>
+      <td>${tbadge(t.team)}</td>
+      <td>${t.amount>=0?'<span class="ti">Дохід</span>':'<span class="to">Витрата</span>'}</td>
+      <td>${cbadge(t.category)}</td><td style="color:var(--t2)">${t.seoName||t.seo||'—'}</td>
+      <td style="color:var(--t3);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.comment||'—'}</td>
+      <td style="text-align:right">${txAmtDisplay(t)}</td>
+      <td><div style="display:flex;gap:4px"><button class="btn bg bs" onclick="showEditTx(${t.id})" style="padding:3px 7px;font-size:11px">✎</button><button class="btn brd bs" onclick="confirmDeleteTx(${t.id})" style="padding:3px 7px;font-size:11px">🗑</button></div></td>
+    </tr>`).join('')}
+    ${filt.length===0?`<tr><td colspan="9" style="padding:20px 16px;color:var(--t3);text-align:center">Немає транзакцій</td></tr>`:''}
+    </tbody></table>
+  </div></td></tr>`;
+}
+
+function setF(domain,key,val){
+  const f=getF(domain);f[key]=val;
+  if(key==='type'){
+    const allTx=DB.transactions.filter(t=>t.site===domain&&!t.deleted);
+    const av=val==='income'?new Set(allTx.filter(t=>t.amount>=0&&t.category).map(t=>t.category))
+      :val==='expense'?new Set(allTx.filter(t=>t.amount<0&&t.category).map(t=>t.category))
+      :new Set(allTx.map(t=>t.category).filter(Boolean));
+    if(f.cat&&!av.has(f.cat))f.cat='';
+  }
+  expandedSites.set(domain,f);renderSites();
+  if(key==='period'&&val==='custom'){
+    if(!f.from){setTimeout(()=>{const el=document.querySelector('.exp-daterow .cdp-trigger');if(el)el.click();},100);}
+  }
+}
+
+// ── SEARCHABLE SITE DROPDOWN ──
+function buildSiteDropdown(selectedSite){
+  // Include "Без Сайту" as first option
+  const allSites=['Без Сайту',...Object.keys(DB.sites).sort()];
+  return`<div style="position:relative" id="site-dd-wrap">
+    <input class="inp" id="et-site" placeholder="Пошук сайту..." value="${selectedSite||''}" autocomplete="off"
+      oninput="filterSiteDd(this.value)" onfocus="filterSiteDd(this.value)" onblur="setTimeout(()=>hideSiteDd(),200)" style="width:100%">
+    <div id="site-dd-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s2);border:1px solid var(--b2);border-radius:7px;max-height:180px;overflow-y:auto;z-index:200;margin-top:2px"></div>
+  </div>`;
+}
+function filterSiteDd(q){
+  const list=document.getElementById('site-dd-list');if(!list)return;
+  const allSites=['Без Сайту',...Object.keys(DB.sites).sort()];
+  const matches=q?allSites.filter(s=>s.toLowerCase().includes(q.toLowerCase())):allSites;
+  list.style.display=matches.length?'block':'none';
+  list.innerHTML=matches.slice(0,30).map(s=>`<div onclick="pickSite('${esc(s)}')" style="padding:8px 12px;cursor:pointer;font-size:13px;font-family:var(--fm);color:var(--t1)" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''">${s}</div>`).join('');
+}
+function hideSiteDd(){const l=document.getElementById('site-dd-list');if(l)l.style.display='none';}
+function pickSite(s){
+  const inp=document.getElementById('et-site');if(inp)inp.value=s;
+  hideSiteDd();
+  // 9) Auto-fill team from site; "Без Сайту" clears team lock
+  if(s==='Без Сайту'){
+    // unlock team selector
+    const tw=document.getElementById('team-split-wrap');
+    if(tw){const sel=document.getElementById('et-team');if(sel)sel.disabled=false;}
+    return;
+  }
+  const si=DB.sites[s];
+  if(si&&si.team){
+    // auto-set team and lock if not split mode
+    if(!txTeamSplit.enabled){
+      const tw=document.getElementById('team-split-wrap');
+      if(tw){
+        // re-render with pre-selected team
+        const prevEnabled=txTeamSplit.enabled;
+        txTeamSplit.enabled=false;
+        renderTeamSplit();
+        const sel=document.getElementById('et-team');
+        if(sel){sel.value=si.team;sel.disabled=true;}
+      }
+    }
+    // also update SEO list for this team
+    updateSeoByTeam(si.team);
+  }
+}
+// 2) Filter SEO dropdown by selected team(s)
+function updateSeoByTeam(team){
+  const sel=document.getElementById('et-seo');if(!sel)return;
+  const prev=sel.value;
+  let teams=[];
+  if(txTeamSplit.enabled){
+    teams=getTeams().filter(t=>txTeamSplit.teams[t]?.sel);
+  } else if(team){
+    teams=[team];
+  }
+  const filtered=teams.length>0
+    ?Object.entries(DB.seos).filter(([h,s])=>teams.includes(s.team)||!s.team||s.team==='')
+    :Object.entries(DB.seos);
+  sel.innerHTML=`<option value="">— Виберіть —</option>`+filtered.map(([h,s])=>`<option value="${h}" ${prev===h?'selected':''}>@${h}${s.name?' — '+s.name:''}</option>`).join('');
+}
+
+function initTeamSplit(currentTeam){
+  txTeamSplit={enabled:false,teams:{}};
+  getTeams().forEach(t=>txTeamSplit.teams[t]={sel:t===currentTeam,pct:0});
+}
+function renderTeamSplit(){
+  const el=document.getElementById('team-split-wrap');if(!el)return;
+  const teams=getTeams().slice().sort();
+  if(!txTeamSplit.enabled){
+    el.innerHTML=`<div class="fr"><div class="fl">Команда</div><select class="inp" id="et-team" onchange="onTeamChange(this.value)"><option value="">—</option>${teams.map(t=>`<option value="${t}">${t}</option>`).join('')}</select></div>
+    <div style="margin-bottom:14px"><button class="btn bg bs" style="font-size:12px" onclick="enableTeamSplit()">⊕ Розподілити між командами</button></div>`;
+    return;
+  }
+  const selTeams=teams.filter(t=>txTeamSplit.teams[t]?.sel);
+  const totalPct=selTeams.reduce((s,t)=>s+(parseFloat(txTeamSplit.teams[t]?.pct)||0),0);
+  const focusId=txTeamSplit._focusId||null;
+  el.innerHTML=`<div class="fr" style="margin-bottom:6px"><div class="fl">Команди (мультивибір)</div></div>
+  ${teams.map(t=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+    <div class="cb ${txTeamSplit.teams[t]?.sel?'c':''}" onclick="toggleSplitTeam('${t}')">${txTeamSplit.teams[t]?.sel?'✓':''}</div>
+    <span style="font-size:13px;min-width:80px">${t}</span>
+    ${txTeamSplit.teams[t]?.sel?`<input class="inp inp-sm" type="number" min="0" max="100" step="1" id="pct-${t}" value="${txTeamSplit.teams[t].pct||''}" placeholder="%" oninput="setSplitPct('${t}',this)" style="width:70px"> %`:''}
+  </div>`).join('')}
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+    <button class="btn bg bs" style="font-size:12px" onclick="distributeEvenly()">↔ Рівномірно розподілити</button>
+    <span id="split-pct-counter" style="font-size:12px;color:${Math.abs(totalPct-100)<0.01?'var(--ac)':totalPct>100?'var(--rd)':'var(--t3)'}">${totalPct.toFixed(0)}% / 100%</span>
+    <button class="btn bg bs" style="font-size:12px;margin-left:auto" onclick="disableTeamSplit()">✕ Скасувати</button>
+  </div>`;
+  if(focusId){
+    const inp=document.getElementById(focusId);
+    if(inp){inp.focus();const l=inp.value.length;inp.setSelectionRange(l,l);}
+    txTeamSplit._focusId=null;
+  }
+  if(txSeoSplit.enabled)renderSeoSplitUI();
+}
+function onTeamChange(team){
+  updateSeoByTeam(team);
+  // unlock team field (site selection may have locked it)
+  const sel=document.getElementById('et-team');if(sel)sel.disabled=false;
+}
+function setSplitPct(t,inp){
+  const teams=getTeams();
+  let v=parseFloat(inp.value)||0;
+  const others=teams.filter(x=>x!==t&&txTeamSplit.teams[x]?.sel).reduce((s,x)=>s+(parseFloat(txTeamSplit.teams[x]?.pct)||0),0);
+  const maxAllowed=100-others;
+  if(v>maxAllowed){v=maxAllowed;inp.value=v;}
+  txTeamSplit.teams[t].pct=v;
+  // Update only the percentage counter without full re-render
+  const selTeams=teams.filter(x=>txTeamSplit.teams[x]?.sel);
+  const totalPct=selTeams.reduce((s,x)=>s+(parseFloat(txTeamSplit.teams[x]?.pct)||0),0);
+  const counter=document.getElementById('split-pct-counter');
+  if(counter){
+    counter.style.color=Math.abs(totalPct-100)<0.01?'var(--ac)':totalPct>100?'var(--rd)':'var(--t3)';
+    counter.textContent=totalPct.toFixed(0)+'% / 100%';
+  }
+  if(txSeoSplit.enabled)renderSeoSplitUI();
+}
+
+let txTeamSplit={enabled:false,teams:{}};
+let txSeoSplit={enabled:false,seos:{}};
+function enableSeoSplit(){
+  txSeoSplit.enabled=true;
+  txSeoSplit.seos={};
+  // Pre-select SEOs from selected teams
+  const selTeams=getTeams().filter(t=>txTeamSplit.teams[t]?.sel);
+  const team=!txTeamSplit.enabled?document.getElementById('et-team')?.value:'';
+  const teams=selTeams.length>0?selTeams:(team?[team]:[]);
+  teams.forEach(tt=>{
+    Object.entries(DB.seos).filter(([h,s])=>s.team===tt).forEach(([h])=>{txSeoSplit.seos[h]=true;});
+  });
+  renderSeoSplitUI();
+}
+function disableSeoSplit(){txSeoSplit.enabled=false;txSeoSplit.seos={};const el=document.getElementById('seo-split-wrap');if(el)el.innerHTML='';}
+function toggleSeoSplitItem(h){txSeoSplit.seos[h]=!txSeoSplit.seos[h];renderSeoSplitUI();}
+function renderSeoSplitUI(){
+  const el=document.getElementById('seo-split-wrap');if(!el)return;
+  if(!txSeoSplit.enabled){el.innerHTML='';return;}
+  const amt=parseFloat(document.getElementById('et-amt')?.value)||0;
+  // Get available SEOs based on selected teams
+  const selTeams=getTeams().filter(t=>txTeamSplit.teams[t]?.sel);
+  const team=!txTeamSplit.enabled?document.getElementById('et-team')?.value:'';
+  const teams=selTeams.length>0?selTeams:(team?[team]:[]);
+  let availSeos=[];
+  if(teams.length>0){
+    teams.forEach(tt=>{
+      Object.entries(DB.seos).filter(([h,s])=>s.team===tt).forEach(([h,s])=>{availSeos.push({h,team:tt,name:s.name||h});});
+    });
+  } else {
+    Object.entries(DB.seos).forEach(([h,s])=>{availSeos.push({h,team:s.team,name:s.name||h});});
+  }
+  const selSeos=availSeos.filter(s=>txSeoSplit.seos[s.h]);
+  const totalSel=selSeos.length;
+  // Calculate amounts per team then per seo
+  let listHtml='';
+  if(txTeamSplit.enabled&&selTeams.length>0){
+    selTeams.forEach(tt=>{
+      const pct=(parseFloat(txTeamSplit.teams[tt]?.pct)||100)/100;
+      const teamAmt=amt*pct;
+      const teamSelSeos=selSeos.filter(s=>s.team===tt);
+      if(teamSelSeos.length===0) return;
+      const perSeo=teamAmt/teamSelSeos.length;
+      teamSelSeos.forEach(s=>{
+        listHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-bottom:1px solid var(--b1);font-size:12px">
+          <span style="color:var(--t1)">@${s.h} <span style="color:var(--t3)">(${tt})</span></span>
+          <span class="fm" style="color:var(--t2)">${getCurSym()}${Math.abs(perSeo).toFixed(2)}</span>
+        </div>`;
+      });
+    });
+  } else if(totalSel>0){
+    const perSeo=amt/totalSel;
+    selSeos.forEach(s=>{
+      listHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-bottom:1px solid var(--b1);font-size:12px">
+        <span style="color:var(--t1)">@${s.h} <span style="color:var(--t3)">(${s.team})</span></span>
+        <span class="fm" style="color:var(--t2)">${getCurSym()}${Math.abs(perSeo).toFixed(2)}</span>
+      </div>`;
+    });
+  }
+  // Group SEOs by team for selection
+  const teamGroups={};
+  availSeos.forEach(s=>{if(!teamGroups[s.team])teamGroups[s.team]=[];teamGroups[s.team].push(s);});
+  const groupedTeams=Object.keys(teamGroups).sort();
+  let selectHtml='';
+  groupedTeams.forEach(tt=>{
+    const tSeos=teamGroups[tt];
+    const allSel=tSeos.every(s=>txSeoSplit.seos[s.h]);
+    const toggleAll=`(function(){const ss=[${tSeos.map(s=>"'"+s.h+"'").join(',')}];const allOn=${allSel};ss.forEach(function(h){txSeoSplit.seos[h]=!allOn});renderSeoSplitUI()})()`;
+    selectHtml+=`<div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer" onclick="${toggleAll}">
+        ${tbadge(tt)}
+        <span style="font-size:10px;color:var(--t3);font-family:var(--fm)">${tSeos.filter(s=>txSeoSplit.seos[s.h]).length}/${tSeos.length}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;padding-left:8px">
+        ${tSeos.map(s=>`<div style="display:flex;align-items:center;gap:5px;cursor:pointer" onclick="toggleSeoSplitItem('${s.h}')">
+          <div class="cb ${txSeoSplit.seos[s.h]?'c':''}" style="width:15px;height:15px;font-size:10px">${txSeoSplit.seos[s.h]?'✓':''}</div>
+          <span style="font-size:11px;color:${txSeoSplit.seos[s.h]?'var(--t1)':'var(--t3)'};font-family:var(--fm)">@${s.h}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  // Group distribution list by team too
+  let distHtml='';
+  if(totalSel>0){
+    groupedTeams.forEach(tt=>{
+      const teamSelSeos=selSeos.filter(s=>s.team===tt);
+      if(teamSelSeos.length===0)return;
+      let perSeo;
+      if(txTeamSplit.enabled&&selTeams.length>0){
+        const pct=(parseFloat(txTeamSplit.teams[tt]?.pct)||100)/100;
+        perSeo=amt*pct/teamSelSeos.length;
+      } else {
+        perSeo=amt/totalSel;
+      }
+      distHtml+=`<div style="margin-bottom:2px;padding:4px 8px">${tbadge(tt)}</div>`;
+      teamSelSeos.forEach(s=>{
+        distHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px 4px 20px;border-bottom:1px solid var(--b1);font-size:12px">
+          <span style="color:var(--t1);font-family:var(--fm)">@${s.h}</span>
+          <span class="fm" style="color:var(--t2)">${getCurSym()}${Math.abs(perSeo).toFixed(2)}</span>
+        </div>`;
+      });
+    });
+  }
+  el.innerHTML=`<div style="background:var(--s2);border:1px solid var(--b1);border-radius:9px;padding:12px;margin-bottom:14px">
+    <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;font-family:var(--fm);margin-bottom:10px">Оберіть SEO для розподілу</div>
+    ${selectHtml}
+    ${totalSel===0?'<div style="font-size:12px;color:var(--t3);padding:4px 0">Оберіть хоча б одного SEO</div>':''}
+    ${distHtml?`<div style="border-top:1px solid var(--b1);padding-top:8px;margin-top:6px"><div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;font-family:var(--fm);margin-bottom:6px">Розподіл (${totalSel} SEO)</div>${distHtml}</div>`:''}
+  </div>
+  <div style="margin-bottom:14px"><button class="btn bg bs" style="font-size:12px" onclick="disableSeoSplit()">✕ Скасувати розподіл</button></div>`;
+}
+function getNextSplitGroup(){
+  let max=0;DB.transactions.forEach(t=>{if(t.splitGroup&&t.splitGroup>max)max=t.splitGroup;});return max+1;
+}
+function enableTeamSplit(){
+  txTeamSplit.enabled=true;
+  const tm=document.getElementById('et-team');
+  if(tm&&tm.value){txTeamSplit.teams[tm.value]={...(txTeamSplit.teams[tm.value]||{}),sel:true,pct:100};}
+  renderTeamSplit();updateSeoByTeam();
+}
+function disableTeamSplit(){txTeamSplit.enabled=false;renderTeamSplit();updateSeoByTeam();}
+function toggleSplitTeam(t){
+  if(!txTeamSplit.teams[t])txTeamSplit.teams[t]={sel:false,pct:0};
+  txTeamSplit.teams[t].sel=!txTeamSplit.teams[t].sel;
+  if(!txTeamSplit.teams[t].sel)txTeamSplit.teams[t].pct=0;
+  // Auto-set 100% if only one team selected
+  const selTeams=getTeams().filter(x=>txTeamSplit.teams[x]?.sel);
+  if(selTeams.length===1){txTeamSplit.teams[selTeams[0]].pct=100;}
+  renderTeamSplit();
+  updateSeoByTeam();
+}
+function distributeEvenly(){
+  const sel=getTeams().filter(t=>txTeamSplit.teams[t]?.sel);if(!sel.length)return;
+  const each=parseFloat((100/sel.length).toFixed(2));
+  sel.forEach((t,i)=>txTeamSplit.teams[t].pct=i===sel.length-1?parseFloat((100-(each*(sel.length-1))).toFixed(2)):each);
+  renderTeamSplit();
+}
+function showEditTx(id){
+  const t=DB.transactions.find(x=>x.id===id);if(!t)return;
+  const cats=[...new Set(DB.transactions.map(x=>x.category).filter(Boolean))].sort();
+  initTeamSplit(t.team);
+  showModal(`<div class="md" onclick="event.stopPropagation()">
+    <div class="mdt">Редагувати транзакцію</div>
+    <div class="fr"><div class="fl">Дата</div><div class="inp" id="et-date-trigger" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="openCdp(this,document.getElementById('et-date').value,function(v){document.getElementById('et-date').value=v;document.getElementById('et-date-label').textContent=v||'Оберіть дату'})"><span id="et-date-label">${t.date||'Оберіть дату'}</span><span style="color:var(--t3)">📅</span></div><input type="hidden" id="et-date" value="${t.date||''}"></div>
+    <div class="fr"><div class="fl">Сума</div><div style="display:flex;gap:8px"><input class="inp" type="number" step="0.01" id="et-amt" value="${t.origCur==='eur'?parseFloat((t.amount*getRate()).toFixed(2)):t.amount}" style="flex:1"><select class="inp" id="et-cur" style="width:70px"><option value="usd" ${t.origCur!=='eur'?'selected':''}>$</option><option value="eur" ${t.origCur==='eur'?'selected':''}>€</option></select></div></div>
+    <div class="fr"><div class="fl">Сайт</div>${buildSiteDropdown(t.site)}</div>
+    <div id="team-split-wrap"></div>
+    <div class="fr"><div class="fl">Категорія</div><select class="inp" id="et-cat"><option value="">—</option>${cats.map(c=>`<option ${t.category===c?'selected':''} value="${c}">${c}</option>`).join('')}</select></div>
+    <div class="fr"><div class="fl">SEO</div><select class="inp" id="et-seo"><option value="">—</option>${Object.entries(DB.seos).map(([h,s])=>`<option ${t.seo===h?'selected':''} value="${h}">@${h} — ${s.name}</option>`).join('')}</select></div>
+    <div style="margin-bottom:14px"><button class="btn bg bs" style="font-size:12px" onclick="enableSeoSplit()">👥 Розподілити між SEO</button></div>
+    <div id="seo-split-wrap"></div>
+    <div class="fr"><div class="fl">Коментар</div><input class="inp" id="et-comm" value="${t.comment||''}"></div>
+    <div class="ma">
+      <button class="btn brd" onclick="confirmDeleteTx(${id});closeModal()">🗑 Видалити</button>
+      <button class="btn bg" onclick="closeModal()">Скасувати</button>
+      <button class="btn bp" onclick="saveEditTx(${id})">✓ Зберегти</button>
+    </div>
+  </div>`);
+  txSeoSplit.enabled=false;
+  // If this tx is part of a split group, load split info
+  if(t.splitGroup){
+    const groupTxs=DB.transactions.filter(x=>x.splitGroup===t.splitGroup&&!x.deleted);
+    const totalAmt=groupTxs.reduce((s,x)=>s+x.amount,0);
+    document.getElementById('et-amt').value=totalAmt;
+    // Pre-select teams from group
+    txTeamSplit.enabled=true;
+    const groupTeams=[...new Set(groupTxs.map(x=>x.team))];
+    groupTeams.forEach(gt=>{
+      if(txTeamSplit.teams[gt]){
+        txTeamSplit.teams[gt].sel=true;
+        const teamSum=groupTxs.filter(x=>x.team===gt).reduce((s,x)=>s+x.amount,0);
+        txTeamSplit.teams[gt].pct=totalAmt?parseFloat((teamSum/totalAmt*100).toFixed(2)):0;
+      }
+    });
+  }
+  // render team split after modal is in DOM
+  const tm=document.getElementById('et-team');
+  renderTeamSplit();
+  if(tm&&!t.splitGroup)tm.value=t.team||'';
+}
+function saveEditTx(id){
+  const t=DB.transactions.find(x=>x.id===id);if(!t)return;
+  const seo=document.getElementById('et-seo').value;
+  const amtRaw=parseFloat(document.getElementById('et-amt').value)||0;
+  const selCur=document.getElementById('et-cur')?.value||'usd';
+  let amt=amtRaw;
+  if(selCur==='eur'){amt=parseFloat((amtRaw/getRate()).toFixed(2));}
+  // preserve sign for edit
+  if(t.amount<0&&amt>0)amt=-amt;
+  const site=document.getElementById('et-site').value;
+  const cat=document.getElementById('et-cat').value||null;
+  const comm=document.getElementById('et-comm').value||null;
+  const date=document.getElementById('et-date').value;
+  if(txTeamSplit.enabled){
+    const selTeams=getTeams().filter(t2=>txTeamSplit.teams[t2]?.sel);
+    const totalPct=selTeams.reduce((s,t2)=>s+(parseFloat(txTeamSplit.teams[t2].pct)||0),0);
+    if(selTeams.length>1&&Math.abs(totalPct-100)>0.1){alert('Сума відсотків повинна дорівнювати 100%');return;}
+    // Remove old split group members if any
+    if(t.splitGroup){
+      DB.transactions=DB.transactions.filter(x=>x.splitGroup!==t.splitGroup||x.id===id);
+    }
+    const sg=selTeams.length>1||txSeoSplit.enabled?t.splitGroup||getNextSplitGroup():null;
+    if(txSeoSplit.enabled){
+      // distribute among selected SEOs per team
+      const pickedSeos=Object.entries(txSeoSplit.seos).filter(([,v])=>v).map(([h])=>h);
+      let isFirst=true;
+      selTeams.forEach(tt=>{
+        const pct=(parseFloat(txTeamSplit.teams[tt].pct)||100)/100;
+        const teamAmt=amt*pct;
+        const teamSeos=pickedSeos.filter(h=>DB.seos[h]?.team===tt);
+        if(teamSeos.length===0)return;
+        const perSeo=teamAmt/teamSeos.length;
+        teamSeos.forEach(h=>{
+          const sName=DB.seos[h]?.name||h;
+          if(isFirst){t.date=date;t.amount=parseFloat(perSeo.toFixed(2));t.site=site;t.team=tt;t.category=cat;t.seo=h;t.seoName=sName;t.comment=comm;t.splitGroup=sg;t.origCur=selCur;isFirst=false;}
+          else{const newId=DB.transactions.length?Math.max(...DB.transactions.map(x=>x.id))+1:1;DB.transactions.push({id:newId,date,amount:parseFloat(perSeo.toFixed(2)),site,team:tt,category:cat,seo:h,seoName:sName,fired:false,comment:comm,deleted:false,splitGroup:sg,origCur:selCur});}
+        });
+      });
+    } else {
+      const ft=selTeams[0]||'';
+      t.date=date;t.amount=parseFloat((amt*((parseFloat(txTeamSplit.teams[ft]?.pct)||100)/100)).toFixed(2));
+      t.site=site;t.team=ft;t.category=cat;t.seo=seo;t.seoName=DB.seos[seo]?.name||seo;t.comment=comm;t.splitGroup=sg;t.origCur=selCur;
+      for(let i=1;i<selTeams.length;i++){
+        const tt=selTeams[i];const pct=(parseFloat(txTeamSplit.teams[tt].pct)||0)/100;
+        const newId=DB.transactions.length?Math.max(...DB.transactions.map(x=>x.id))+1:1;
+        DB.transactions.push({id:newId,date,amount:parseFloat((amt*pct).toFixed(2)),site,team:tt,
+          category:cat,seo,seoName:DB.seos[seo]?.name||seo,fired:false,comment:comm,deleted:false,splitGroup:sg,origCur:selCur});
+      }
+    }
+  } else {
+    const team=document.getElementById('et-team')?.value||t.team;
+    t.date=date;t.amount=amt;t.site=site;t.team=team;t.category=cat;
+    t.seo=seo;t.seoName=DB.seos[seo]?.name||seo;t.comment=comm;t.origCur=selCur;
+  }
+  txSeoSplit.enabled=false;
+  saveDB();closeModal();render();
+}
+function deleteTx(id){
+  const t=DB.transactions.find(x=>x.id===id);if(t){t.deleted=true;
+    // Also delete split group members
+    if(t.splitGroup){DB.transactions.filter(x=>x.splitGroup===t.splitGroup).forEach(x=>x.deleted=true);}
+  }
+  saveDB();render();ub();
+}
+function confirmDeleteTx(id){
+  const t=DB.transactions.find(x=>x.id===id);if(!t)return;
+  let msg='Ви впевнені, що хочете видалити цю транзакцію?';
+  if(t.splitGroup){const cnt=DB.transactions.filter(x=>x.splitGroup===t.splitGroup&&!x.deleted).length;msg+=' Буде видалено '+cnt+' пов\'язаних частин.';}
+  if(!confirm(msg))return;
+  deleteTx(id);
+}
+function showAddTx(txType){
+  const isIncome=txType==='income';
+  const isExpense=txType==='expense';
+  const incomeCats=(DB.catIncome&&DB.catIncome.length?[...DB.catIncome]:[...new Set(DB.transactions.filter(t=>!t.deleted&&t.amount>=0&&t.category).map(t=>t.category))]).sort();
+  const expenseCats=(DB.catExpense&&DB.catExpense.length?[...DB.catExpense]:[...new Set(DB.transactions.filter(t=>!t.deleted&&t.amount<0&&t.category).map(t=>t.category))]).sort();
+  let availCats=isIncome?incomeCats:isExpense?expenseCats:[...new Set([...incomeCats,...expenseCats])].sort();
+  const title=isIncome?'+ Додати дохід':isExpense?'− Додати витрату':'Додати транзакцію';
+  // All SEO for initial load (no team selected yet)
+  const allSeoOpts=Object.entries(DB.seos).map(([h])=>`<option value="${h}">@${h}</option>`).join('');
+  initTeamSplit('');
+  showModal(`<div class="md" onclick="event.stopPropagation()">
+    <div class="mdt">${title}</div>
+    <div class="fr"><div class="fl">Дата</div><div class="inp" id="et-date-trigger" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="openCdp(this,document.getElementById('et-date').value,function(v){document.getElementById('et-date').value=v;document.getElementById('et-date-label').textContent=v||'Оберіть дату'})"><span id="et-date-label">${today()}</span><span style="color:var(--t3)">📅</span></div><input type="hidden" id="et-date" value="${today()}"></div>
+    <div class="fr"><div class="fl">Сума</div>
+      <div style="display:flex;gap:8px">
+        <input class="inp" type="number" step="0.01" id="et-amt" value="" style="flex:1">
+        <select class="inp" id="et-cur" style="width:70px">
+          <option value="usd">$</option>
+          <option value="eur">€</option>
         </select>
       </div>
-      <div class="fr"><div class="fl">Команди (через кому)</div>
-        <input class="inp" id="teams-in" value="${escapeHtml((DB.teams||[]).join(', '))}" style="width:100%">
-      </div>
-      <div class="fr"><div class="fl">Категорії (через кому)</div>
-        <input class="inp" id="cats-in" value="${escapeHtml((DB.categories||[]).join(', '))}" style="width:100%">
-      </div>
-      <button class="btn bp" onclick="saveSysSettings()">Зберегти</button>
-    </div>` : ''}`;
+    </div>
+    <div class="fr"><div class="fl">Сайт</div>${buildSiteDropdown('')}</div>
+    <div id="team-split-wrap"></div>
+    <div class="fr"><div class="fl">Категорія</div><select class="inp" id="et-cat"><option value="">— Виберіть —</option>${availCats.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>
+    <div class="fr"><div class="fl">SEO</div><select class="inp" id="et-seo"><option value="">— Виберіть —</option>${allSeoOpts}</select></div>
+    <div style="margin-bottom:14px"><button class="btn bg bs" style="font-size:12px" onclick="enableSeoSplit()">👥 Розподілити між SEO</button></div>
+    <div id="seo-split-wrap"></div>
+    <div class="fr"><div class="fl">Коментар</div><input class="inp" id="et-comm" value=""></div>
+    <div class="ma">
+      <button class="btn bg" onclick="closeModal()">Скасувати</button>
+      <button class="btn ${isIncome?'bp':'brd'}" onclick="addTxSave('${txType||''}')">✓ ${isIncome?'Додати дохід':isExpense?'Додати витрату':'Додати'}</button>
+    </div>
+  </div>`);
+  txSeoSplit.enabled=false;
+  renderTeamSplit();
+}
+function addTxSave(txType){
+  const isIncome=txType==='income';
+  const isExpense=txType==='expense';
+  const amtRaw=parseFloat(document.getElementById('et-amt').value);
+  const site=document.getElementById('et-site').value.trim();
+  const cat=document.getElementById('et-cat').value;
+  const seo=document.getElementById('et-seo').value;
+  const date=document.getElementById('et-date').value;
+  const selCur=document.getElementById('et-cur')?.value||'usd';
+  const errs=[];
+  if(!date) errs.push('Дата');
+  if(isNaN(amtRaw)||amtRaw===0) errs.push('Сума');
+  if(!site) errs.push('Сайт');
+  if(!cat) errs.push('Категорія');
+  if(txSeoSplit.enabled){
+    const selSeoCount=Object.values(txSeoSplit.seos).filter(Boolean).length;
+    if(!selSeoCount) errs.push('SEO (оберіть хоча б одного)');
+  } else {
+    if(!seo) errs.push('SEO');
+  }
+  if(txTeamSplit.enabled){
+    const selTeams=getTeams().filter(t=>txTeamSplit.teams[t]?.sel);
+    if(!selTeams.length) errs.push('Команда');
+  } else {
+    const team=document.getElementById('et-team')?.value;
+    if(!team) errs.push('Команда');
+  }
+  if(errs.length){alert('Заповніть обов\'язкові поля: '+errs.join(', '));return;}
+  // Convert EUR to USD if needed
+  let amt=Math.abs(amtRaw);
+  if(selCur==='eur'){const rate=getRate();amt=parseFloat((amt/rate).toFixed(2));}
+  if(isExpense) amt=-amt;
+  else if(!isIncome) amt=amtRaw;
+  const comm=document.getElementById('et-comm').value||null;
+  const newId=DB.transactions.length?Math.max(...DB.transactions.map(x=>x.id))+1:1;
+  if(txTeamSplit.enabled){
+    const selTeams=getTeams().filter(t=>txTeamSplit.teams[t]?.sel);
+    const totalPct=selTeams.reduce((s,t)=>s+(parseFloat(txTeamSplit.teams[t].pct)||0),0);
+    if(selTeams.length>1&&Math.abs(totalPct-100)>0.1){alert('Сума відсотків повинна дорівнювати 100%');return;}
+    let nextId=newId;
+    const sg=selTeams.length>1||txSeoSplit.enabled?getNextSplitGroup():null;
+    if(txSeoSplit.enabled){
+      // distribute among selected SEOs per team
+      const pickedSeos=Object.entries(txSeoSplit.seos).filter(([,v])=>v).map(([h])=>h);
+      selTeams.forEach(tt=>{
+        const pct=(parseFloat(txTeamSplit.teams[tt].pct)||100)/100;
+        const teamAmt=amt*pct;
+        const teamSeos=pickedSeos.filter(h=>DB.seos[h]?.team===tt);
+        if(teamSeos.length===0)return;
+        const perSeo=teamAmt/teamSeos.length;
+        teamSeos.forEach(h=>{
+          DB.transactions.push({id:nextId++,date,amount:parseFloat(perSeo.toFixed(2)),site,team:tt,
+            category:cat,seo:h,seoName:DB.seos[h]?.name||h,fired:false,comment:comm,deleted:false,origCur:selCur,splitGroup:sg});
+        });
+      });
+    } else {
+      selTeams.forEach(tt=>{
+        const pct=(parseFloat(txTeamSplit.teams[tt].pct)||100)/100;
+        DB.transactions.push({id:nextId++,date,amount:parseFloat((amt*pct).toFixed(2)),site,team:tt,
+          category:cat,seo,seoName:DB.seos[seo]?.name||seo,fired:false,comment:comm,deleted:false,origCur:selCur,splitGroup:sg});
+      });
+    }
+  } else {
+    const team=document.getElementById('et-team')?.value||'';
+    if(txSeoSplit.enabled){
+      const pickedSeos=Object.entries(txSeoSplit.seos).filter(([,v])=>v).map(([h])=>h);
+      const sg=pickedSeos.length>1?getNextSplitGroup():null;
+      let nextId2=newId;
+      const perSeo=amt/pickedSeos.length;
+      pickedSeos.forEach(h=>{
+        DB.transactions.push({id:nextId2++,date,amount:parseFloat(perSeo.toFixed(2)),site,team,
+          category:cat,seo:h,seoName:DB.seos[h]?.name||h,fired:false,comment:comm,deleted:false,origCur:selCur,splitGroup:sg});
+      });
+    } else {
+      DB.transactions.push({id:newId,date,amount:amt,site,team,category:cat,seo,
+        seoName:DB.seos[seo]?.name||seo,fired:false,comment:comm,deleted:false,origCur:selCur});
+    }
+  }
+  txSeoSplit.enabled=false;
+  saveDB();closeModal();render();ub();
 }
 
-async function changePassword() {
-  const oldPassword = document.getElementById('cp-old').value;
-  const newPassword = document.getElementById('cp-new').value;
-  const err = document.getElementById('cp-err');
-  err.textContent = '';
-  try {
-    await api('/api/change-password', { method: 'POST', body: { oldPassword, newPassword } });
-    err.style.color = 'var(--gn)';
-    err.textContent = 'Пароль змінено';
-    document.getElementById('cp-old').value = '';
-    document.getElementById('cp-new').value = '';
-  } catch (e) {
-    err.style.color = 'var(--rd)';
-    err.textContent = e.message;
+// ── SITES ──
+function renderSites(){
+  const{sites,seos}=DB;
+  const teams=[...new Set(Object.values(sites).map(s=>s.team).filter(Boolean))].sort();
+  const txBS={};
+  for(const t of DB.transactions){if(!t.site||t.deleted)continue;if(!txBS[t.site])txBS[t.site]={cnt:0,bal:0};txBS[t.site].cnt++;txBS[t.site].bal+=t.amount;}
+  const filtered=Object.entries(sites).filter(([d,i])=>{
+    if(siteFilt.search&&!d.toLowerCase().includes(siteFilt.search.toLowerCase()))return false;
+    if(siteFilt.team&&i.team!==siteFilt.team)return false;
+    if(siteFilt.seo&&i.seo!==siteFilt.seo)return false;
+    return true;
+  }).sort((a,b)=>a[0].localeCompare(b[0]));
+  const paginated=filtered.slice((sitePage-1)*PAGE,sitePage*PAGE);
+  const allSel=paginated.length>0&&paginated.every(([d])=>selSites.has(d));
+  let rowsHtml='';
+  for(const [d,i] of paginated){
+    const isExp=expandedSites.has(d);const info=txBS[d]||{cnt:0,bal:0};
+    rowsHtml+=`<tr class="sr ${isExp?'exp':''}" onclick="toggleExp('${d}')">
+      <td onclick="event.stopPropagation()">${chk(selSites.has(d),`event.stopPropagation();toggleSite('${d}')`)}</td>
+      <td><span class="chevron ${isExp?'open':''}">▶</span><span class="fm" style="font-size:13px;color:var(--t1);font-weight:500">${d}</span></td>
+      <td>${tbadge(i.team)}</td>
+      <td>${i.seo?`<div style="font-size:13px;color:var(--t1)">${i.seoName||i.seo}</div><div style="font-size:11px;color:var(--t3);font-family:var(--fm)">@${i.seo}</div>`:'<span style="color:var(--t3)">—</span>'}</td>
+      <td><span class="fm" style="font-size:12px;color:var(--t3)">${info.cnt} транз.</span></td>
+      <td style="text-align:right">${bH(info.bal)}</td>
+      <td><div style="display:flex;gap:4px"><button class="btn bg bs" onclick="event.stopPropagation();showEditSite('${d}')" style="padding:3px 8px;font-size:11px">✎</button><button class="btn brd bs" onclick="event.stopPropagation();deleteSite('${d}')" style="padding:3px 7px;font-size:11px">🗑</button></div></td>
+    </tr>`;
+    if(isExp)rowsHtml+=renderSiteExp(d);
+  }
+  document.getElementById('content').innerHTML=`
+  <div class="fi">
+    <input class="inp" placeholder="Пошук домену..." id="site-search-inp" value="${siteFilt.search}" oninput="siteFilt.search=this.value;sitePage=1;renderSitesKeepFocus()" style="width:220px">
+    <select class="inp" onchange="siteFilt.team=this.value;sitePage=1;renderSites()"><option value="">Всі команди</option>${teams.map(t=>`<option ${siteFilt.team===t?'selected':''} value="${t}">${t}</option>`).join('')}</select>
+    <select class="inp" onchange="siteFilt.seo=this.value;sitePage=1;renderSites()"><option value="">Всі SEO</option>${Object.entries(seos).map(([h,s])=>`<option ${siteFilt.seo===h?'selected':''} value="${h}">@${h} — ${s.name}</option>`).join('')}</select>
+    <div style="margin-left:auto"><button class="btn bp bs" onclick="showAddSite()">+ Додати сайт</button></div>
+  </div>
+  ${selSites.size>0?`<div class="bb"><span style="color:var(--ac);font-family:var(--fm);font-weight:600">${selSites.size}</span><span style="color:var(--t2)">вибрано</span><button class="btn bg bs" onclick="showBulk('team')">↔ Команду</button><button class="btn bg bs" onclick="showBulk('seo')">👤 SEO</button><button class="btn bg bs" style="margin-left:auto" onclick="selSites=new Set();renderSites()">Зняти</button></div>`:''}
+  <div class="cd" style="padding:0;overflow:hidden">
+    <table><thead><tr><th style="width:40px">${chk(allSel,"toggleAllSites()")}</th><th>Домен ↑</th><th>Команда</th><th>SEO</th><th>Транзакцій</th><th style="text-align:right">Баланс</th><th></th></tr></thead>
+    <tbody>${rowsHtml}</tbody></table>
+    <div style="padding:12px 14px;border-top:1px solid var(--b1)">${pgr(filtered.length,sitePage,'setSitePage','site')}</div>
+  </div>`;
+}
+function toggleExp(d){if(expandedSites.has(d))expandedSites.delete(d);else expandedSites.set(d,{period:'all',cat:'',type:'',from:'',to:''});renderSites();}
+function setSitePage(p){sitePage=p;renderSites();}
+function renderSitesKeepFocus(){renderSites();const inp=document.getElementById('site-search-inp');if(inp){const v=inp.value;inp.focus();inp.setSelectionRange(v.length,v.length);}}
+function deleteSite(domain){if(!confirm('Видалити сайт "'+domain+'"?'))return;delete DB.sites[domain];saveDB();renderSites();ub();}
+function toggleSite(d){selSites.has(d)?selSites.delete(d):selSites.add(d);renderSites();}
+function toggleAllSites(){
+  const f=Object.entries(DB.sites).filter(([d,i])=>{
+    if(siteFilt.search&&!d.toLowerCase().includes(siteFilt.search.toLowerCase()))return false;
+    if(siteFilt.team&&i.team!==siteFilt.team)return false;
+    if(siteFilt.seo&&i.seo!==siteFilt.seo)return false;
+    return true;
+  }).sort((a,b)=>a[0].localeCompare(b[0])).slice((sitePage-1)*PAGE,sitePage*PAGE);
+  const all=f.every(([d])=>selSites.has(d));
+  f.forEach(([d])=>all?selSites.delete(d):selSites.add(d));
+  renderSites();
+}
+function showBulk(type){
+  const teams=[...new Set(Object.values(DB.sites).map(s=>s.team).filter(Boolean))].sort();
+  showModal(`<div class="md" onclick="event.stopPropagation()"><div class="mdt">Масова зміна — ${selSites.size} сайтів</div>
+    ${type==='team'?`<div class="fr"><div class="fl">Нова команда</div><select class="inp" id="bv"><option value="">Виберіть</option>${teams.map(t=>`<option value="${t}">${t}</option>`).join('')}</select></div>`
+    :`<div class="fr"><div class="fl">Новий SEO</div><select class="inp" id="bv"><option value="">Виберіть</option>${Object.entries(DB.seos).map(([h,s])=>`<option value="${h}">@${h} — ${s.name}</option>`).join('')}</select></div>`}
+    <div class="ma"><button class="btn bg" onclick="closeModal()">Скасувати</button><button class="btn bp" onclick="applyBulk('${type}')">✓ Застосувати</button></div></div>`);
+}
+function applyBulk(type){
+  const val=document.getElementById('bv').value;if(!val)return;
+  for(const d of selSites){if(type==='team')DB.sites[d]={...DB.sites[d],team:val};else DB.sites[d]={...DB.sites[d],seo:val,seoName:DB.seos[val]?.name||val};}
+  saveDB();selSites=new Set();closeModal();renderSites();ub();
+}
+function filterSiteSeoByTeam(team,selectedSeo){
+  const sel=document.getElementById('es');if(!sel)return;
+  const filtered=Object.entries(DB.seos).filter(([h,s])=>!team||s.team===team);
+  sel.innerHTML=`<option value="">—</option>`+filtered.map(([h,s])=>`<option ${selectedSeo===h?'selected':''} value="${h}">@${h} — ${s.name}</option>`).join('');
+}
+function filterAddSiteSeoByTeam(team){
+  const sel=document.getElementById('as2');if(!sel)return;
+  const filtered=Object.entries(DB.seos).filter(([h,s])=>!team||s.team===team);
+  sel.innerHTML=`<option value="">—</option>`+filtered.map(([h,s])=>`<option value="${h}">@${h} — ${s.name}</option>`).join('');
+}
+function showEditSite(domain){
+  const i=DB.sites[domain];const teams=[...new Set(Object.values(DB.sites).map(s=>s.team).filter(Boolean))].sort();
+  const filteredSeos=i.team?Object.entries(DB.seos).filter(([h,s])=>s.team===i.team):Object.entries(DB.seos);
+  showModal(`<div class="md" onclick="event.stopPropagation()"><div class="mdt">Редагувати сайт</div>
+    <div class="alrt ai" style="font-family:var(--fm);font-size:13px">${domain}</div>
+    <div class="fr"><div class="fl">Команда</div><select class="inp" id="et" onchange="filterSiteSeoByTeam(this.value,'${i.seo||''}')"><option value="">—</option>${teams.map(t=>`<option ${i.team===t?'selected':''} value="${t}">${t}</option>`).join('')}</select></div>
+    <div class="fr"><div class="fl">SEO</div><select class="inp" id="es"><option value="">—</option>${filteredSeos.map(([h,s])=>`<option ${i.seo===h?'selected':''} value="${h}">@${h} — ${s.name}</option>`).join('')}</select></div>
+    <div class="ma"><button class="btn bg" onclick="closeModal()">Скасувати</button><button class="btn bp" onclick="saveEditSite('${domain}')">✓ Зберегти</button></div></div>`);
+}
+function saveEditSite(d){const t=document.getElementById('et').value,s=document.getElementById('es').value;DB.sites[d]={...DB.sites[d],team:t,seo:s,seoName:DB.seos[s]?.name||s};saveDB();closeModal();renderSites();}
+function showAddSite(){
+  const teams=[...new Set(Object.values(DB.sites).map(s=>s.team).filter(Boolean))].sort();
+  showModal(`<div class="md" onclick="event.stopPropagation()"><div class="mdt">Додати сайт</div>
+    <div class="fr"><div class="fl">Домен</div><input class="inp" id="ad" placeholder="example.com"></div>
+    <div class="fr"><div class="fl">Команда</div><select class="inp" id="at" onchange="filterAddSiteSeoByTeam(this.value)"><option value="">—</option>${teams.map(t=>`<option value="${t}">${t}</option>`).join('')}</select></div>
+    <div class="fr"><div class="fl">SEO</div><select class="inp" id="as2"><option value="">—</option>${Object.entries(DB.seos).map(([h,s])=>`<option value="${h}">@${h} — ${s.name}</option>`).join('')}</select></div>
+    <div class="ma"><button class="btn bg" onclick="closeModal()">Скасувати</button><button class="btn bp" onclick="addSite()">+ Додати</button></div></div>`);
+}
+function addSite(){const dom=document.getElementById('ad').value.trim();if(!dom)return;const t=document.getElementById('at').value,s=document.getElementById('as2').value;DB.sites[dom]={team:t,seo:s,seoName:DB.seos[s]?.name||s};saveDB();closeModal();renderSites();ub();}
+
+let txInfiniteCount=50;
+function getTxFiltered(){
+  const active=applyUserFilter(DB.transactions.filter(t=>!t.deleted));
+  let result=active;
+  if(txState.period!=='recent'){
+    let from=txState.from,to=txState.to;
+    if(txState.period!=='custom'){const pd=periodDates(txState.period==='all'?'':txState.period);from=pd.from;to=pd.to;}
+    result=active.filter(t=>{
+      if(from&&t.date<from)return false;
+      if(to&&t.date>to)return false;
+      return true;
+    });
+  }
+  return result.filter(t=>{
+    if(txState.type==='income'&&t.amount<0)return false;
+    if(txState.type==='expense'&&t.amount>=0)return false;
+    if(txState.cat&&t.category!==txState.cat)return false;
+    return true;
+  }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+}
+function setTxState(key,val){
+  txState[key]=val;
+  txInfiniteCount=50;
+  if(key==='type'){
+    const active=applyUserFilter(DB.transactions.filter(t=>!t.deleted));
+    const av=val==='income'?new Set(active.filter(t=>t.amount>=0&&t.category).map(t=>t.category))
+      :val==='expense'?new Set(active.filter(t=>t.amount<0&&t.category).map(t=>t.category))
+      :new Set(active.map(t=>t.category).filter(Boolean));
+    if(txState.cat&&!av.has(txState.cat))txState.cat='';
+  }
+  txPage=1;renderTx();
+}
+
+let expandedSplitGroups=new Set();
+function toggleSplitGroup(sg){expandedSplitGroups.has(sg)?expandedSplitGroups.delete(sg):expandedSplitGroups.add(sg);renderTx();}
+function renderTxRow(t){
+  return`<tr>
+      <td class="fm" style="color:var(--t3);font-size:12px;white-space:nowrap">${t.date||'—'}</td>
+      <td style="font-family:var(--fm);font-size:12px;color:var(--t1);font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.site||'Без Сайту'}</td>
+      <td>${tbadge(t.team)}</td>
+      <td style="font-size:12px;color:var(--t2)">${t.seo?'@'+t.seo:'—'}</td>
+      <td>${cbadge(t.category)}</td>
+      <td>${t.amount>=0?'<span class="ti">Дохід</span>':'<span class="to">Витрата</span>'}</td>
+      <td style="font-size:12px;color:var(--t3);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.comment||'—'}</td>
+      <td style="text-align:right">${txAmtDisplay(t)}</td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn bg bs" onclick="showEditTx(${t.id})" style="padding:3px 7px;font-size:11px">✎</button>
+        <button class="btn brd bs" onclick="confirmDeleteTx(${t.id})" style="padding:3px 7px;font-size:11px">🗑</button>
+      </div></td>
+    </tr>`;
+}
+function renderTxRows(txs){
+  const seen=new Set();let html='';
+  for(const t of txs){
+    if(t.splitGroup&&seen.has(t.splitGroup))continue;
+    if(t.splitGroup){
+      seen.add(t.splitGroup);
+      const group=DB.transactions.filter(x=>x.splitGroup===t.splitGroup&&!x.deleted);
+      const totalAmt=group.reduce((s,x)=>s+x.amount,0);
+      const teams=[...new Set(group.map(x=>x.team))];
+      const isExp=expandedSplitGroups.has(t.splitGroup);
+      html+=`<tr class="sr ${isExp?'exp':''}" onclick="toggleSplitGroup(${t.splitGroup})" style="cursor:pointer">
+        <td class="fm" style="color:var(--t3);font-size:12px;white-space:nowrap"><span class="chevron ${isExp?'open':''}">▶</span>${t.date||'—'}</td>
+        <td style="font-family:var(--fm);font-size:12px;color:var(--t1);font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.site||'Без Сайту'}</td>
+        <td>${teams.map(tt=>tbadge(tt)).join(' ')}</td>
+        <td style="font-size:12px;color:var(--t2)">Розподілено</td>
+        <td>${cbadge(t.category)}</td>
+        <td>${totalAmt>=0?'<span class="ti">Дохід</span>':'<span class="to">Витрата</span>'}</td>
+        <td style="font-size:12px;color:var(--t3);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.comment||'—'}</td>
+        <td style="text-align:right">${aH(totalAmt)}</td>
+        <td><div style="display:flex;gap:4px" onclick="event.stopPropagation()">
+          <button class="btn bg bs" onclick="showEditTx(${t.id})" style="padding:3px 7px;font-size:11px">✎</button>
+          <button class="btn brd bs" onclick="confirmDeleteTx(${t.id})" style="padding:3px 7px;font-size:11px">🗑</button>
+        </div></td>
+      </tr>`;
+      if(isExp){
+        html+=`<tr><td colspan="9" style="padding:0;background:#0c0f14"><table class="exp-tbl" style="width:100%">
+          ${group.map(g=>`<tr><td style="padding-left:32px">${tbadge(g.team)}</td><td style="font-size:12px;color:var(--t2)">${g.seo?'@'+g.seo:'—'}</td><td style="text-align:right">${aH(g.amount)}</td></tr>`).join('')}
+        </table></td></tr>`;
+      }
+    } else {
+      html+=renderTxRow(t);
+    }
+  }
+  return html;
+}
+function renderTx(){
+  const active=applyUserFilter(DB.transactions.filter(t=>!t.deleted));
+  const iC=new Set(active.filter(t=>t.amount>=0&&t.category).map(t=>t.category));
+  const eC=new Set(active.filter(t=>t.amount<0&&t.category).map(t=>t.category));
+  const allCats=[...new Set(active.map(t=>t.category).filter(Boolean))].sort();
+  const avail=txState.type==='income'?iC:txState.type==='expense'?eC:new Set([...iC,...eC]);
+  const filtered=getTxFiltered();
+  const bal=filtered.reduce((s,t)=>s+t.amount,0);
+  const inc=filtered.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0);
+  const exp=filtered.filter(t=>t.amount<0).reduce((s,t)=>s+t.amount,0);
+  const shown=filtered.slice(0,txInfiniteCount);
+  const hasMore=filtered.length>txInfiniteCount;
+  const periods=[{k:'recent',l:'Останні'},{k:'prev',l:'Попер. місяць'},{k:'cur',l:'Цей місяць'},{k:'year',l:'Цей рік'},{k:'all',l:'Весь час'},{k:'custom',l:'Вибрати дати'}];
+
+  document.getElementById('content').innerHTML=`
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+    ${periods.map(p=>`<button class="pp ${txState.period===p.k?'a':''}" onclick="setTxState('period','${p.k}')">${p.l}</button>`).join('')}
+  </div>
+  ${txState.period==='custom'?`<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+    ${cdpTrigger('tx-from-cdp','Від',txState.from,"function(v){setTxState('from',v)}")}
+    ${cdpTrigger('tx-to-cdp','До',txState.to,"function(v){setTxState('to',v)}")}
+  </div>`:''}
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+    <button class="tp ${!txState.type?'a-all':''}" onclick="setTxState('type','')">Всі</button>
+    <button class="tp tp-in ${txState.type==='income'?'a-in':''}" onclick="setTxState('type','income')">↑ Дохід</button>
+    <button class="tp tp-out ${txState.type==='expense'?'a-out':''}" onclick="setTxState('type','expense')">↓ Витрата</button>
+    <span style="color:var(--b2);margin:0 4px">|</span>
+    <button class="cat-btn ${!txState.cat?'a':''}" onclick="setTxState('cat','')">Всі категорії</button>
+    ${allCats.map(c=>`<button class="cat-btn ${txState.cat===c?'a':''} ${!avail.has(c)?'dis':''}" onclick="${avail.has(c)?`setTxState('cat','${esc(c)}')`:''}"">${c}</button>`).join('')}
+  </div>
+  <div style="margin-bottom:14px"><div class="cd" style="padding:10px 16px;display:inline-flex;gap:20px;align-items:center">
+    <span style="color:var(--t3);font-size:13px">Знайдено: <strong style="color:var(--t1)">${filtered.length.toLocaleString()}</strong></span>
+    <span style="color:var(--t3);font-size:13px">Баланс: ${bH(bal)}</span>
+    <span style="color:var(--t3);font-size:12px">↑ <span style="color:var(--ac)">${getCurSym()}${inc.toFixed(2)}</span></span>
+    ${exp<0?`<span style="color:var(--t3);font-size:12px">↓ <span style="color:var(--rd)">${getCurSym()}${Math.abs(exp).toFixed(2)}</span></span>`:''}
+  </div></div>
+  <div class="cd" style="padding:0;overflow:hidden">
+    <table><thead><tr><th>Дата</th><th>Сайт</th><th>Команда</th><th>SEO</th><th>Категорія</th><th>Тип</th><th>Коментар</th><th style="text-align:right">Сума</th><th></th></tr></thead>
+    <tbody id="tx-tbody">${renderTxRows(shown)}</tbody></table>
+    ${hasMore?`<div style="padding:14px;text-align:center;border-top:1px solid var(--b1)">
+      <button class="btn bg" onclick="txLoadMore()">Завантажити ще (${filtered.length-txInfiniteCount} залишилось)</button>
+    </div>`:'<div style="padding:10px 14px;border-top:1px solid var(--b1);text-align:center;font-size:12px;color:var(--t3)">Показано всі ${filtered.length.toLocaleString()} записів</div>'}
+  </div>`;
+  if(txState.period==='custom'){
+    if(!txState.from){setTimeout(()=>{const el=document.getElementById('tx-from-cdp');if(el)el.click();},100);}
+  }
+}
+function txLoadMore(){txInfiniteCount+=50;renderTx();}
+function setTxPage(p){txPage=p;renderTx();}
+
+
+function renderImport(){
+  const txCount=DB.transactions?DB.transactions.filter(t=>!t.deleted).length:0;
+  document.getElementById('content').innerHTML=`<div style="max-width:700px">
+    <div class="tc2" style="margin-bottom:20px">
+      <div class="cd">
+        <div class="st" style="margin-bottom:14px">📥 Імпорт з Finmap</div>
+        <div class="uz" id="uz" ondragover="event.preventDefault();this.classList.add('dr')" ondragleave="this.classList.remove('dr')" ondrop="hDrop(event)" onclick="document.getElementById('fi').click()">
+          <div style="font-size:32px;color:var(--ac);margin-bottom:8px">↑</div>
+          <div style="font-size:15px;font-weight:600;margin-bottom:4px">Завантажте експорт Finmap</div>
+          <div style="color:var(--t3);font-size:13px">Перетягніть .xlsx або клікніть</div>
+          <input id="fi" type="file" accept=".xlsx,.json" style="display:none" onchange="hFile(this.files[0])">
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--t3)">
+          <div style="margin-bottom:4px">Підтримувані формати:</div>
+          <div>· <strong>.xlsx</strong> — експорт з Finmap (всі 16 колонок)</div>
+          <div>· <strong>.json</strong> — бекап FinTrack</div>
+        </div>
+        <div style="margin-top:12px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);cursor:pointer">
+            <input type="checkbox" id="import-merge" style="width:16px;height:16px;accent-color:var(--ac)">
+            Додати до існуючих даних (не замінювати)
+          </label>
+        </div>
+      </div>
+      <div class="cd">
+        <div class="st" style="margin-bottom:14px">📤 Експорт</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn bp" onclick="exportToXlsx()" style="justify-content:center" ${txCount===0?'disabled':''}> Експорт в .xlsx (Finmap формат)</button>
+          <button class="btn bg" onclick="exportToJson()" style="justify-content:center" ${txCount===0?'disabled':''}> Експорт в .json (бекап)</button>
+        </div>
+        <div style="margin-top:14px;font-size:12px;color:var(--t3)">
+          <div><strong>.xlsx</strong> — можна відкрити в Excel або імпортувати назад в Finmap</div>
+          <div><strong>.json</strong> — повний бекап всіх даних</div>
+        </div>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--b1)">
+          <div class="sl" style="margin-bottom:6px">Поточна база</div>
+          <div style="font-size:13px;color:var(--t2)">${txCount.toLocaleString()} транзакцій · ${Object.keys(DB.sites||{}).length} сайтів · ${Object.keys(DB.seos||{}).length} SEO</div>
+        </div>
+      </div>
+    </div>
+    <div id="import-status"></div>
+    <div class="cd" style="margin-top:14px">
+      <div class="st" style="margin-bottom:10px">Що імпортується з Finmap</div>
+      <div style="font-size:13px;color:var(--t2);line-height:1.6">
+        Кожна строка переноситься повністю: дата платежу, дата нарахування, період нарахування (з/по), сума в валюті рахунка, сума в валюті компанії, з рахунку, на рахунок, категорія, підкатегорія, контрагент, підконтрагент, проект, підпроект, теги, коментар. З тегів витягуються SEO та команди. Звільнені позначаються автоматично.
+      </div>
+    </div>
+  </div>`;
+}
+async function hDrop(e){e.preventDefault();document.getElementById('uz')?.classList.remove('dr');hFile(e.dataTransfer.files[0]);}
+async function hFile(file){
+  if(!file)return;
+  const st=document.getElementById('import-status');
+  st.innerHTML='<div class="alrt ai">Читаємо файл...</div>';
+  const merge=document.getElementById('import-merge')?.checked;
+  try{
+    if(file.name.endsWith('.json')){
+      const text=await file.text();const data=JSON.parse(text);
+      if(merge){
+        const maxId=DB.transactions.length?Math.max(...DB.transactions.map(x=>x.id)):0;
+        if(data.transactions)data.transactions.forEach((t,i)=>{t.id=maxId+1+i;DB.transactions.push(t);});
+        if(data.sites)Object.assign(DB.sites,data.sites);
+        if(data.seos)Object.assign(DB.seos,data.seos);
+      } else {
+        const users=DB.users;Object.assign(DB,data);if(users&&!data.users)DB.users=users;
+      }
+      saveDB();ub();
+      st.innerHTML='<div class="alrt as">✓ JSON бекап імпортовано</div>';
+      setTimeout(()=>sv('dash'),1500);return;
+    }
+    if(!window.XLSX)throw new Error('XLSX ще завантажується...');
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:null});
+    const parsed=importRows(rows);
+    if(merge){
+      const maxId=DB.transactions.length?Math.max(...DB.transactions.map(x=>x.id)):0;
+      parsed.transactions.forEach((t,i)=>{t.id=maxId+1+i;});
+      DB.transactions.push(...parsed.transactions);
+      Object.assign(DB.sites,parsed.sites);Object.assign(DB.seos,parsed.seos);
+      if(parsed.teams)parsed.teams.forEach(t=>{if(!DB.teams.includes(t))DB.teams.push(t);});
+      if(parsed.catIncome)parsed.catIncome.forEach(c=>{if(!DB.catIncome.includes(c))DB.catIncome.push(c);});
+      if(parsed.catExpense)parsed.catExpense.forEach(c=>{if(!DB.catExpense.includes(c))DB.catExpense.push(c);});
+    } else {
+      const users=DB.users;
+      DB.sites=parsed.sites;DB.seos=parsed.seos;DB.transactions=parsed.transactions;
+      if(parsed.teams&&parsed.teams.length)DB.teams=parsed.teams;
+      if(parsed.catIncome&&parsed.catIncome.length)DB.catIncome=parsed.catIncome;
+      if(parsed.catExpense&&parsed.catExpense.length)DB.catExpense=parsed.catExpense;
+      if(users)DB.users=users;
+    }
+    st.innerHTML='<div class="alrt ai">Зберігаємо у базу...</div>';
+    saveDB();ub();
+    const tc=parsed.transactions.length,sc=Object.keys(parsed.sites).length,se=Object.keys(parsed.seos).length;
+    const splitInfo=parsed.splitGroups?` · розгорнуто ${parsed.splitGroups} split-груп → ${parsed.splitTxs} транзакцій`:'';
+    st.innerHTML=`<div class="alrt as">✓ Імпортовано: ${tc.toLocaleString()} транзакцій · ${sc} сайтів · ${se} SEO${splitInfo}${merge?' (додано до існуючих)':''}</div>`;
+    setTimeout(()=>sv('dash'),2000);
+  }catch(e){st.innerHTML=`<div class="alrt" style="background:var(--rdd);border:1px solid rgba(255,77,109,.2);color:var(--rd)">Помилка: ${e.message}</div>`;}
+}
+
+function showModal(html){document.getElementById('modal-root').innerHTML=`<div class="mo" onclick="closeModal()">${html}</div>`;}
+function closeModal(){document.getElementById('modal-root').innerHTML='';}
+function render(){
+  const sb=document.querySelector('.sb');
+  const tbA=document.getElementById('tb-actions');
+  // Show login screen if not authenticated
+  if(!currentUser){
+    if(sb) sb.style.display='none';
+    if(tbA) tbA.style.display='none';
+    document.getElementById('page-title').textContent='Вхід';
+    return renderLogin();
+  }
+  if(sb) sb.style.display='';
+  if(tbA) tbA.style.display=canAddTransactions()?'flex':'none';
+  // Render demo banner if in demo mode
+  const demohtml=demoUser?`<div class="bb" style="background:var(--acd);border-color:var(--ac);margin:0;border-radius:0;margin-bottom:16px">
+    <span style="color:var(--t2)">Ви переглядаєте як</span> <span style="color:var(--ac);font-weight:600">${demoUser.name}</span>
+    <button class="btn bg bs" style="margin-left:auto" onclick="stopDemo()">Вийти з перегляду</button>
+  </div>`:'';
+  const contentDiv=document.getElementById('content');
+  if(demohtml){
+    contentDiv.style.display='flex';
+    contentDiv.style.flexDirection='column';
+  } else {
+    contentDiv.style.display='block';
+  }
+  const originalInner=contentDiv.innerHTML;
+  // Hide nav items based on permissions
+  const navAn=document.getElementById('nav-analytics');if(navAn)navAn.style.display=canAccessAnalytics()?'':'none';
+  const navIm=document.getElementById('nav-import');if(navIm)navIm.style.display=canAccessImport()?'':'none';
+  // Redirect if no access
+  if(VIEW==='analytics'&&!canAccessAnalytics())VIEW='dash';
+  if(VIEW==='import'&&!canAccessImport())VIEW='dash';
+  if(VIEW==='dash')renderDash();else if(VIEW==='sites')renderSites();else if(VIEW==='tx')renderTx();else if(VIEW==='analytics')renderAnalytics();else if(VIEW==='settings')renderSettings();else if(VIEW==='import')renderImport();
+  if(demohtml){
+    contentDiv.innerHTML=demohtml+contentDiv.innerHTML;
+  }
+  updateUserSection();
+}
+
+// ── SEO (moved into settings, but still renderable standalone) ──
+let seoEditState={h:null,dirty:false};
+
+function renderSeoPanel(container){
+  const{sites,seos,transactions}=DB;
+  const active=applyUserFilter(transactions.filter(t=>!t.deleted));
+  const{from:sF,to:sT}=periodDates(seoSitePeriod==='all'?'':seoSitePeriod);
+  const txBySite={};
+  for(const t of active){
+    if(!t.site)continue;
+    if(seoSitePeriod!=='all'&&!inP(t.date,sF,sT))continue;
+    if(!txBySite[t.site])txBySite[t.site]={bal:0};
+    txBySite[t.site].bal+=t.amount;
+  }
+  const stats=Object.entries(seos).map(([h,info])=>{
+    const ms=Object.entries(sites).filter(([,s])=>s.seo===h);
+    return{h,...info,sc:ms.length,siteList:ms};
+  }).sort((a,b)=>(a.h||'').localeCompare(b.h||''));
+  const selS=selSeoH?stats.find(s=>s.h===selSeoH):null;
+  const sPeriods=[{k:'prev',l:'Попер. місяць'},{k:'cur',l:'Поточний місяць'},{k:'year',l:'Цей рік'},{k:'all',l:'Весь час'}];
+  let detailHtml='<div class="em">👤 Виберіть SEO</div>';
+  if(selS){
+    const sitesWithBal=selS.siteList.map(([d,si])=>({d,si,bal:(txBySite[d]?.bal||0)})).sort((a,b)=>b.bal-a.bal);
+    const isEditing=seoEditState.h===selS.h;
+    const teams=getTeams().slice().sort();
+    detailHtml=`<div class="cd" style="overflow-y:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:17px;font-weight:600;font-family:var(--fm)">@${selS.h}</div>
+          <div style="color:var(--t3);font-size:13px;margin-top:2px">${tbadge(selS.team)}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${!isEditing
+            ?`<button class="btn bg bs" onclick="startSeoEdit('${selS.h}')">✎ Редагувати</button>
+              <button class="btn brd bs" onclick="deleteSeo('${selS.h}')">🗑</button>`
+            :`<button class="btn bg bs" onclick="cancelSeoEdit('${selS.h}')" title="Закрити">✕ Закрити</button>
+              <button class="btn bp bs" onclick="saveSeoEdit('${selS.h}')">💾 Зберегти</button>`}
+        </div>
+      </div>
+      ${isEditing?`<div class="cd" style="background:var(--s2);margin-bottom:16px">
+        <div class="fr"><div class="fl">Нік</div><input class="inp" id="seo-handle" value="${selS.h}" style="width:100%" oninput="seoEditState.dirty=true"></div>
+        <div class="fr"><div class="fl">Команда <span style="color:var(--rd)">*</span></div><select class="inp" id="seo-team" style="width:100%" onchange="seoEditState.dirty=true"><option value="">— Виберіть —</option>${teams.map(t=>`<option ${selS.team===t?'selected':''} value="${t}">${t}</option>`).join('')}</select></div>
+      </div>`:''}
+      <div class="sc" style="margin:0 0 14px"><div class="sl">Сайтів</div><div class="sv">${selS.sc}</div></div>
+      <div class="sh"><div style="font-size:14px;font-weight:600">Сайти по балансу</div>
+        <div class="dpp">${sPeriods.map(p=>`<button class="dp ${seoSitePeriod===p.k?'a':''}" onclick="seoSitePeriod='${p.k}';renderSettings()">${p.l}</button>`).join('')}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${sitesWithBal.map(({d,bal})=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--b1)">
+          <span style="font-size:12px;font-family:var(--fm);color:var(--t1)">${d}</span>${bH(bal)}
+        </div>`).join('')}
+        ${sitesWithBal.length===0?'<div style="color:var(--t3);font-size:13px">Немає сайтів</div>':''}
+      </div>
+    </div>`;
+  }
+  container.innerHTML=`<div class="tc2">
+    <div class="cd" style="padding:0;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:13px;font-weight:600;color:var(--t2)">SEO-спеціалісти</span>
+        <button class="btn bp bs" onclick="showAddSeo()">+ Додати</button>
+      </div>
+      <table><thead><tr><th>Нік</th><th>Команда</th><th>Сайтів</th></tr></thead><tbody>
+      ${stats.map(s=>`<tr onclick="selectSeo('${s.h}')" style="cursor:pointer;${selSeoH===s.h?'background:var(--acd)':''}">
+        <td><div style="font-weight:500;color:var(--t1);font-size:13px;font-family:var(--fm)">@${s.h}</div></td>
+        <td>${tbadge(s.team)}</td><td class="fm" style="color:var(--t2)">${s.sc}</td>
+      </tr>`).join('')}
+      </tbody></table>
+    </div>
+    <div>${detailHtml}</div>
+  </div>`;
+}
+function selectSeo(h){
+  if(seoEditState.h&&seoEditState.dirty&&seoEditState.h!==h){
+    if(confirm('Є незбережені зміни. Зберегти перед переходом?'))saveSeoEdit(seoEditState.h);
+    else seoEditState={h:null,dirty:false};
+  } else seoEditState={h:null,dirty:false};
+  selSeoH=h;renderSettings();
+}
+function startSeoEdit(h){seoEditState={h,dirty:false};renderSettings();}
+function cancelSeoEdit(h){
+  if(seoEditState.dirty&&!confirm('Є незбережені зміни. Закрити без збереження?'))return;
+  seoEditState={h:null,dirty:false};renderSettings();
+}
+function saveSeoEdit(h){
+  const newHandle=(document.getElementById('seo-handle')?.value||h).trim();
+  const newTeam=document.getElementById('seo-team')?.value||'';
+  if(!newTeam){alert('Оберіть команду для SEO');return;}
+  if(newHandle!==h){
+    DB.seos[newHandle]={...DB.seos[h],team:newTeam};
+    delete DB.seos[h];
+    Object.values(DB.sites).forEach(s=>{if(s.seo===h){s.seo=newHandle;s.seoName=newHandle;}});
+    DB.transactions.forEach(t=>{if(t.seo===h){t.seo=newHandle;t.seoName=newHandle;}});
+    selSeoH=newHandle;
+  } else {
+    DB.seos[h]={...DB.seos[h],team:newTeam};
+  }
+  seoEditState={h:null,dirty:false};saveDB();renderSettings();
+}
+function deleteSeo(h){
+  const cnt=Object.values(DB.sites).filter(s=>s.seo===h).length;
+  if(!confirm(`Видалити SEO @${h}?${cnt>0?' Буде знято з '+cnt+' сайт(ів).':''}`))return;
+  delete DB.seos[h];
+  Object.values(DB.sites).forEach(s=>{if(s.seo===h){s.seo='deleted_user';s.seoName='Видалений користувач';}});
+  DB.transactions.forEach(t=>{if(t.seo===h){t.seo='deleted_user';t.seoName='Видалений користувач';}});
+  if(selSeoH===h)selSeoH=null;
+  seoEditState={h:null,dirty:false};
+  saveDB();renderSettings();
+}
+function showAddSeo(){
+  showModal(`<div class="md" onclick="event.stopPropagation()"><div class="mdt">Додати SEO</div>
+    <div class="fr"><div class="fl">Нік</div><input class="inp" id="seo-h-new" placeholder="username"></div>
+    <div class="fr"><div class="fl">Команда <span style="color:var(--rd)">*</span></div><select class="inp" id="seo-t-new"><option value="">— Виберіть —</option>${getTeams().slice().sort().map(t=>`<option value="${t}">${t}</option>`).join('')}</select></div>
+    <div class="ma"><button class="btn bg" onclick="closeModal()">Скасувати</button>
+    <button class="btn bp" onclick="addSeoSave()">+ Додати</button></div></div>`);
+  setTimeout(()=>document.getElementById('seo-h-new')?.focus(),50);
+}
+function addSeoSave(){
+  const h=document.getElementById('seo-h-new').value.trim();
+  const t=document.getElementById('seo-t-new').value;
+  if(!h){alert('Введіть нік');return;}
+  if(!t){alert('Оберіть команду');return;}
+  if(DB.seos[h]){alert('Такий нік вже існує');return;}
+  DB.seos[h]={team:t};
+  saveDB();closeModal();selSeoH=h;renderSettings();
+}
+
+// ── SETTINGS ──
+function renderSettings(){
+  if(!DB.catIncome)DB.catIncome=['Hybrid','RevShare','CPA','Flat','Bonus'];
+  if(!DB.catExpense)DB.catExpense=['Domain','Links','Host','Content','Services','Other'];
+  if(!DB.teams)DB.teams=['Fortuna','Phoenix','Baza','Brand','Review'];
+  if(DB.eurRate===undefined)DB.eurRate=0.92;
+  // 6) alphabetical sort
+  const sortedIncome=[...DB.catIncome].sort();
+  const sortedExpense=[...DB.catExpense].sort();
+  const sortedTeams=[...DB.teams].sort();
+  const catList=(arr,key)=>arr.map(c=>{const i=DB[key].indexOf(c);return`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--b1)">
+    <span style="flex:1;font-size:14px;font-family:var(--fm)">${c}</span>
+    <button class="btn bg bs" style="padding:2px 7px;font-size:11px" onclick="editCat('${key}',${i})">✎</button>
+    <button class="btn brd bs" style="padding:2px 7px;font-size:11px" onclick="deleteCat('${key}',${i})">🗑</button>
+  </div>`;}).join('');
+  const teamList=sortedTeams.map(t=>{const i=DB.teams.indexOf(t);return`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--b1)">
+    <span style="flex:1;font-size:14px">${tbadge(t)}</span>
+    <button class="btn bg bs" style="padding:2px 7px;font-size:11px" onclick="editTeam(${i})">✎</button>
+    <button class="btn brd bs" style="padding:2px 7px;font-size:11px" onclick="deleteTeam(${i})">🗑</button>
+  </div>`;}).join('');
+
+  const userList=DB.users.map(u=>{
+    const permSummary=u.role==='admin'?'Адміністратор':
+      `${u.teams?.length?u.teams.length+' команд':u.teams?.length===0?'Усі команди':''}${u.categories?.length?' · '+u.categories.length+' кат':''}`;
+    return`<tr>
+      <td style="font-size:13px;font-family:var(--fm)">${u.email}</td>
+      <td style="font-size:13px;color:var(--t1);font-weight:500">${u.name}</td>
+      <td><span class="bc">${u.role==='admin'?'Admin':'Custom'}</span></td>
+      <td style="font-size:12px;color:var(--t2)">${permSummary}</td>
+      <td><div style="display:flex;gap:4px">
+        <button class="btn bg bs" onclick="showEditUser(${u.id})" style="padding:3px 7px;font-size:11px">✎</button>
+        <button class="btn bg bs" onclick="startDemo(${u.id})" style="padding:3px 7px;font-size:11px" title="Переглянути як цей користувач">👁</button>
+        <button class="btn brd bs" onclick="deleteUser(${u.id})" style="padding:3px 7px;font-size:11px" ${u.id===1?'disabled style="opacity:0.5;cursor:not-allowed"':''}}>🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('content').innerHTML=`
+  <div style="max-width:900px;display:flex;flex-direction:column;gap:20px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="cd">
+        <div class="sh"><div class="st" style="color:var(--ac)">↑ Категорії Доходу</div><button class="btn bp bs" onclick="addCat('catIncome')">+ Додати</button></div>
+        <div>${catList(sortedIncome,'catIncome')}</div>
+        ${DB.catIncome.length===0?'<div style="color:var(--t3);font-size:13px;padding:10px 0">Немає категорій</div>':''}
+      </div>
+      <div class="cd">
+        <div class="sh"><div class="st" style="color:var(--rd)">↓ Категорії Витрат</div><button class="btn brd bs" onclick="addCat('catExpense')">+ Додати</button></div>
+        <div>${catList(sortedExpense,'catExpense')}</div>
+        ${DB.catExpense.length===0?'<div style="color:var(--t3);font-size:13px;padding:10px 0">Немає категорій</div>':''}
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="cd">
+        <div class="sh"><div class="st">👥 Команди</div><button class="btn bp bs" onclick="addTeam()">+ Додати</button></div>
+        <div>${teamList}</div>
+        ${DB.teams.length===0?'<div style="color:var(--t3);font-size:13px;padding:10px 0">Немає команд</div>':''}
+      </div>
+      <div class="cd">
+        <div class="st" style="margin-bottom:16px">💱 Курс валют</div>
+        <div class="fr"><div class="fl">$1 = €</div>
+          <input class="inp" type="number" step="0.0001" id="eur-rate" value="${DB.eurRate||0.92}" oninput="DB.eurRate=parseFloat(this.value)||0.92;saveDB()" style="width:100%">
+        </div>
+        <div style="font-size:12px;color:var(--t3);margin-top:4px">При додаванні € витрати — автоматично конвертується в $. Вже збережені транзакції не перераховуються.</div>
+      </div>
+    </div>
+    <div class="cd" style="padding:0;overflow:hidden">
+      <div style="padding:16px 20px 8px;border-bottom:1px solid var(--b1)"><div class="st">👤 SEO-спеціалісти</div></div>
+      <div style="padding:16px" id="seo-panel-wrap"></div>
+    </div>
+    <div class="cd" style="padding:0;overflow:hidden">
+      <div style="padding:16px 20px 8px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between">
+        <div class="st">👤 Користувачі</div>
+        <button class="btn bp bs" onclick="showAddUser()">+ Додати</button>
+      </div>
+      <table><thead><tr><th>Email</th><th>Ім'я</th><th>Роль</th><th>Дозволи</th><th></th></tr></thead><tbody>${userList}</tbody></table>
+    </div>
+  </div>`;
+  const wrap=document.getElementById('seo-panel-wrap');
+  if(wrap)renderSeoPanel(wrap);
+}
+
+function addCat(key){
+  showModal(`<div class="md" onclick="event.stopPropagation()"><div class="mdt">Додати категорію</div>
+    <div class="fr"><div class="fl">Назва</div><input class="inp" id="cat-inp" placeholder="Назва категорії"></div>
+    <div class="ma"><button class="btn bg" onclick="closeModal()">Скасувати</button>
+    <button class="btn bp" onclick="saveCat('${key}',-1)">+ Додати</button></div></div>`);
+  setTimeout(()=>document.getElementById('cat-inp')?.focus(),50);
+}
+function editCat(key,idx){
+  const val=DB[key][idx]||'';
+  showModal(`<div class="md" onclick="event.stopPropagation()"><div class="mdt">Редагувати категорію</div>
+    <div class="fr"><div class="fl">Назва</div><input class="inp" id="cat-inp" value="${val}"></div>
+    <div class="ma"><button class="btn bg" onclick="closeModal()">Скасувати</button>
+    <button class="btn bp" onclick="saveCat('${key}',${idx})">✓ Зберегти</button></div></div>`);
+  setTimeout(()=>document.getElementById('cat-inp')?.focus(),50);
+}
+function saveCat(key,idx){
+  if(!DB[key])DB[key]=[];
+  const val=document.getElementById('cat-inp').value.trim();if(!val)return;
+  if(idx===-1)DB[key].push(val);else DB[key][idx]=val;
+  saveDB();closeModal();renderSettings();
+}
+function deleteCat(key,idx){
+  if(!confirm('Видалити категорію?'))return;
+  DB[key].splice(idx,1);saveDB();renderSettings();
+}
+// 7) Teams management
+function addTeam(){
+  showModal(`<div class="md" onclick="event.stopPropagation()"><div class="mdt">Додати команду</div>
+    <div class="fr"><div class="fl">Назва</div><input class="inp" id="team-inp" placeholder="Назва команди"></div>
+    <div class="ma"><button class="btn bg" onclick="closeModal()">Скасувати</button>
+    <button class="btn bp" onclick="saveTeam(-1)">+ Додати</button></div></div>`);
+  setTimeout(()=>document.getElementById('team-inp')?.focus(),50);
+}
+function editTeam(idx){
+  const val=DB.teams[idx]||'';
+  showModal(`<div class="md" onclick="event.stopPropagation()"><div class="mdt">Редагувати команду</div>
+    <div class="fr"><div class="fl">Назва</div><input class="inp" id="team-inp" value="${val}"></div>
+    <div class="ma"><button class="btn bg" onclick="closeModal()">Скасувати</button>
+    <button class="btn bp" onclick="saveTeam(${idx})">✓ Зберегти</button></div></div>`);
+  setTimeout(()=>document.getElementById('team-inp')?.focus(),50);
+}
+function saveTeam(idx){
+  if(!DB.teams)DB.teams=[];
+  const val=document.getElementById('team-inp').value.trim();if(!val)return;
+  if(idx===-1)DB.teams.push(val);else DB.teams[idx]=val;
+  saveDB();closeModal();renderSettings();
+}
+function deleteTeam(idx){
+  const name=DB.teams[idx];
+  if(!confirm(`Видалити команду "${name}"?`))return;
+  // 11) replace with "Видалена команда"
+  Object.values(DB.sites).forEach(s=>{if(s.team===name)s.team='Видалена команда';});
+  DB.transactions.forEach(t=>{if(t.team===name)t.team='Видалена команда';});
+  DB.teams.splice(idx,1);
+  saveDB();renderSettings();
+}
+
+// ── USER MANAGEMENT ──
+function userPermsCbxStyle(){return'display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-family:var(--ff);font-size:13px;color:var(--t1)';}
+function userTeamToggle(teamName){
+  const cb=document.querySelector('input[name="team-'+teamName+'"]');if(!cb)return;
+  const isChecked=cb.checked;
+  // Get all sites for this team
+  const teamSites=Object.entries(DB.sites).filter(([d,s])=>s.team===teamName).map(([d])=>d);
+  teamSites.forEach(s=>{const sc=document.querySelector('input[name="site-'+CSS.escape(s)+'"]');if(sc)sc.checked=isChecked;});
+  // Get all SEOs for this team
+  const teamSeos=Object.entries(DB.seos).filter(([h,s])=>s.team===teamName).map(([h])=>h);
+  teamSeos.forEach(h=>{const sc=document.querySelector('input[name="seo-'+h+'"]');if(sc)sc.checked=isChecked;});
+}
+function buildUserPermsHtml(user){
+  const teams=getTeams().sort();
+  const cats=[...new Set([...(DB.catIncome||[]),...(DB.catExpense||[])])].sort();
+  const st=userPermsCbxStyle();
+  // Build team → sites hierarchy
+  let teamSitesHtml='';
+  teams.forEach(t=>{
+    const isTeamSel=user?user.teams?.includes(t):false;
+    const teamSites=Object.entries(DB.sites).filter(([d,s])=>s.team===t).map(([d])=>d).sort();
+    const teamSeos=Object.entries(DB.seos).filter(([h,s])=>s.team===t).map(([h])=>h).sort();
+    const tid='upt-'+t.replace(/\s/g,'_');
+    teamSitesHtml+=`<div style="margin-bottom:8px;border:1px solid var(--b1);border-radius:7px;overflow:hidden">
+      <div style="display:flex;align-items:center;padding:9px 20px 9px 12px;background:var(--s3);cursor:pointer" onclick="event.stopPropagation();var el=document.getElementById('${tid}');var ch=document.getElementById('${tid}-chv');if(el.style.display==='none'){el.style.display='block';ch.style.transform='rotate(180deg)';}else{el.style.display='none';ch.style.transform='rotate(0deg)';}">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;font-family:var(--ff);font-size:13px" onclick="event.stopPropagation();setTimeout(()=>userTeamToggle('${t}'),0)">
+          <input type="checkbox" name="team-${t}" ${isTeamSel?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--ac)"> ${tbadge(t)}
+        </label>
+        <span style="font-size:11px;color:var(--t3);font-family:var(--ff)">${teamSites.length} сайтів · ${teamSeos.length} SEO</span>
+        <svg id="${tid}-chv" width="16" height="16" viewBox="0 0 16 16" style="transition:transform .2s;flex-shrink:0;margin-left:8px"><path d="M4 6L8 10L12 6" stroke="var(--t3)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div id="${tid}" style="display:none;padding:6px 12px 8px 36px">
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 2px;font-family:var(--ff);font-weight:600">Сайти</div>
+        ${teamSites.map(s=>`<label style="${st};font-size:13px;padding:3px 0">
+          <input type="checkbox" name="site-${s}" ${user?.sites?.includes(s)?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:var(--ac)"> <span style="color:var(--t2)">${s}</span>
+        </label>`).join('')}
+        ${teamSites.length===0?'<div style="font-size:12px;color:var(--t3);padding:2px 0">Немає сайтів</div>':''}
+        <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin:8px 0 2px;font-family:var(--ff);font-weight:600">SEO</div>
+        ${teamSeos.map(h=>`<label style="${st};font-size:13px;padding:3px 0">
+          <input type="checkbox" name="seo-${h}" ${user?.seos?.includes(h)?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:var(--ac)"> <span style="color:var(--t2)">@${h}</span>
+        </label>`).join('')}
+        ${teamSeos.length===0?'<div style="font-size:12px;color:var(--t3);padding:2px 0">Немає SEO</div>':''}
+      </div>
+    </div>`;
+  });
+  const incomeCats=(DB.catIncome||[]).sort();
+  const expenseCats=(DB.catExpense||[]).sort();
+  const makeCatCbx=(arr,groupId)=>arr.map(c=>`<label style="${st};font-size:13px;padding:3px 0">
+    <input type="checkbox" name="cat-${c}" ${user?.categories?.includes(c)?'checked':''} style="width:14px;height:14px;cursor:pointer;accent-color:var(--ac)" onchange="syncCatGroup('${groupId}')"> <span style="color:var(--t2)">${c}</span>
+  </label>`).join('');
+  return`<div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;font-family:var(--ff);margin-bottom:10px">Дозволи</div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:600;color:var(--t1);margin-bottom:6px;font-family:var(--ff);text-transform:uppercase;letter-spacing:.5px">Команди та сайти</div>
+      ${teamSitesHtml}
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:600;color:var(--t1);margin-bottom:6px;font-family:var(--ff);text-transform:uppercase;letter-spacing:.5px">Категорії</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="background:var(--s3);border-radius:7px;padding:8px 10px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:10px;font-weight:600;color:var(--ac);margin-bottom:6px;font-family:var(--ff);text-transform:uppercase;letter-spacing:.5px" onclick="var cs=this.closest('div').querySelectorAll('input[type=checkbox]:not(#ucat-inc)');var v=document.getElementById('ucat-inc').checked;cs.forEach(function(c){c.checked=v})">
+            <input type="checkbox" id="ucat-inc" style="width:14px;height:14px;cursor:pointer;accent-color:var(--ac)"> ↑ Дохід
+          </label>
+          ${makeCatCbx(incomeCats,'ucat-inc')}
+        </div>
+        <div style="background:var(--s3);border-radius:7px;padding:8px 10px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:10px;font-weight:600;color:var(--rd);margin-bottom:6px;font-family:var(--ff);text-transform:uppercase;letter-spacing:.5px" onclick="var cs=this.closest('div').querySelectorAll('input[type=checkbox]:not(#ucat-exp)');var v=document.getElementById('ucat-exp').checked;cs.forEach(function(c){c.checked=v})">
+            <input type="checkbox" id="ucat-exp" style="width:14px;height:14px;cursor:pointer;accent-color:var(--rd)"> ↓ Витрати
+          </label>
+          ${makeCatCbx(expenseCats,'ucat-exp')}
+        </div>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--b1);padding-top:10px;margin-top:6px">
+      <div style="font-size:11px;font-weight:600;color:var(--t1);margin-bottom:8px;font-family:var(--ff);text-transform:uppercase;letter-spacing:.5px">Дії з транзакціями</div>
+      <label style="${st};margin-bottom:6px"><input type="checkbox" id="user-can-add" ${user?.canAdd?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--ac)"> Може додавати</label>
+      <label style="${st};margin-bottom:6px"><input type="checkbox" id="user-can-edit" ${user?.canEdit?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--ac)"> Може редагувати</label>
+      <label style="${st};margin-bottom:6px"><input type="checkbox" id="user-can-delete" ${user?.canDelete?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--ac)"> Може видаляти</label>
+      <div style="font-size:11px;font-weight:600;color:var(--t1);margin:12px 0 8px;font-family:var(--ff);text-transform:uppercase;letter-spacing:.5px">Доступ до розділів</div>
+      <label style="${st};margin-bottom:6px"><input type="checkbox" id="user-can-analytics" ${user?.canAnalytics!==false?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--ac)"> Аналітика (в межах дозволів)</label>
+      <label style="${st}"><input type="checkbox" id="user-can-import" ${user?.canImport?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--ac)"> Імпорт документів</label>
+    </div>`;
+}
+function syncCatGroup(groupId){
+  const parent=document.getElementById(groupId);if(!parent)return;
+  const container=parent.closest('div');
+  const children=container.querySelectorAll('input[type=checkbox]:not(#'+groupId+')');
+  parent.checked=[...children].every(c=>c.checked);
+}
+function showAddUser(){
+  showModal(`<div class="md" style="max-width:600px;max-height:85vh" onclick="event.stopPropagation()"><div class="mdt">Додати користувача</div>
+    <div class="fr"><div class="fl">Email</div><input class="inp" id="user-email" placeholder="user@example.com" style="width:100%"></div>
+    <div class="fr"><div class="fl">Пароль</div><input class="inp" type="text" id="user-pass" placeholder="пароль" style="width:100%"></div>
+    <div class="fr"><div class="fl">Ім'я</div><input class="inp" id="user-name" placeholder="Ім'я користувача" style="width:100%"></div>
+    <div class="fr"><div class="fl">Роль</div><select class="inp" id="user-role" onchange="document.getElementById('user-perms').style.display=this.value==='custom'?'block':'none'" style="width:100%">
+      <option value="admin">Адміністратор</option>
+      <option value="custom">Обмежений доступ</option>
+    </select></div>
+    <div id="user-perms" style="display:none;padding:14px 0 0 0;margin-bottom:14px;max-height:400px;overflow-y:auto">
+      ${buildUserPermsHtml(null)}
+    </div>
+    <div class="ma"><button class="btn bg" onclick="closeModal()">Скасувати</button><button class="btn bp" onclick="addUserSave()">+ Додати</button></div></div>`);
+  setTimeout(()=>document.getElementById('user-email').focus(),50);
+}
+function showEditUser(userId){
+  const user=DB.users.find(u=>u.id===userId);if(!user)return;
+  showModal(`<div class="md" style="max-width:600px;max-height:85vh" onclick="event.stopPropagation()"><div class="mdt">Редагувати користувача</div>
+    <div class="fr"><div class="fl">Email</div><input class="inp" id="user-email" value="${user.email}" style="width:100%" disabled></div>
+    <div class="fr"><div class="fl">Пароль (залиш порожнім, щоб не змінювати)</div><input class="inp" type="password" id="user-pass" placeholder="••••••••" style="width:100%"></div>
+    <div class="fr"><div class="fl">Ім'я</div><input class="inp" id="user-name" value="${user.name}" style="width:100%"></div>
+    ${user.id!==1?`<div class="fr"><div class="fl">Роль</div><select class="inp" id="user-role" onchange="document.getElementById('user-perms').style.display=this.value==='custom'?'block':'none'" style="width:100%">
+      <option value="admin" ${user.role==='admin'?'selected':''}>Адміністратор</option>
+      <option value="custom" ${user.role==='custom'?'selected':''}>Обмежений доступ</option>
+    </select></div>`:`<input type="hidden" id="user-role" value="admin">`}
+    <div id="user-perms" style="display:${user.role==='custom'?'block':'none'};padding:14px 0 0 0;margin-bottom:14px;max-height:400px;overflow-y:auto">
+      ${buildUserPermsHtml(user)}
+    </div>
+    <div class="ma"><button class="btn bg" onclick="closeModal()">Скасувати</button><button class="btn bp" onclick="editUserSave(${userId})">✓ Зберегти</button></div></div>`);
+}
+
+async function addUserSave(){
+  const email=document.getElementById('user-email').value.trim();
+  const pass=document.getElementById('user-pass').value;
+  const name=document.getElementById('user-name').value.trim();
+  const role=document.getElementById('user-role').value;
+  if(!email||!pass||!name){alert('Заповніть усі обов\'язкові поля');return;}
+  if(DB.users.find(u=>u.email===email)){alert('Користувач з цим email уже існує');return;}
+  const body={email,password:pass,name,role,teams:[],categories:[],seos:[],sites:[],canAdd:false,canEdit:false,canDelete:false,canAnalytics:true,canImport:false};
+  if(role==='custom'){
+    const teams=getTeams();
+    const sites=Object.keys(DB.sites).sort();
+    const cats=[...new Set([...(DB.catIncome||[]),...(DB.catExpense||[])])].sort();
+    const seos=Object.keys(DB.seos).sort();
+    teams.forEach(t=>{if(document.querySelector(`input[name="team-${t}"]:checked`))body.teams.push(t);});
+    sites.forEach(s=>{if(document.querySelector(`input[name="site-${s}"]:checked`))body.sites.push(s);});
+    cats.forEach(c=>{if(document.querySelector(`input[name="cat-${c}"]:checked`))body.categories.push(c);});
+    seos.forEach(h=>{if(document.querySelector(`input[name="seo-${h}"]:checked`))body.seos.push(h);});
+    body.canAdd=!!document.getElementById('user-can-add')?.checked;
+    body.canEdit=!!document.getElementById('user-can-edit')?.checked;
+    body.canDelete=!!document.getElementById('user-can-delete')?.checked;
+    body.canAnalytics=!!document.getElementById('user-can-analytics')?.checked;
+    body.canImport=!!document.getElementById('user-can-import')?.checked;
+  }
+  try{
+    const{user}=await api('/api/users',{method:'POST',body});
+    DB.users.push(user);
+    closeModal();renderSettings();
+  }catch(e){alert('Помилка: '+e.message);}
+}
+
+async function editUserSave(userId){
+  const user=DB.users.find(u=>u.id===userId);
+  if(!user)return;
+  const pass=document.getElementById('user-pass').value;
+  const name=document.getElementById('user-name').value.trim();
+  const role=document.getElementById('user-role').value;
+  if(!name){alert('Вкажіть ім\'я');return;}
+  const body={name,role};
+  if(pass)body.password=pass;
+  if(role==='custom'){
+    const teams=getTeams();
+    const sites=Object.keys(DB.sites).sort();
+    const cats=[...new Set([...(DB.catIncome||[]),...(DB.catExpense||[])])].sort();
+    const seos=Object.keys(DB.seos).sort();
+    body.teams=[];body.categories=[];body.seos=[];body.sites=[];
+    teams.forEach(t=>{if(document.querySelector(`input[name="team-${t}"]:checked`))body.teams.push(t);});
+    sites.forEach(s=>{if(document.querySelector(`input[name="site-${s}"]:checked`))body.sites.push(s);});
+    cats.forEach(c=>{if(document.querySelector(`input[name="cat-${c}"]:checked`))body.categories.push(c);});
+    seos.forEach(h=>{if(document.querySelector(`input[name="seo-${h}"]:checked`))body.seos.push(h);});
+    body.canAdd=!!document.getElementById('user-can-add')?.checked;
+    body.canEdit=!!document.getElementById('user-can-edit')?.checked;
+    body.canDelete=!!document.getElementById('user-can-delete')?.checked;
+    body.canAnalytics=!!document.getElementById('user-can-analytics')?.checked;
+    body.canImport=!!document.getElementById('user-can-import')?.checked;
+  }
+  try{
+    const{user:updated}=await api('/api/users/'+userId,{method:'PUT',body});
+    const idx=DB.users.findIndex(u=>u.id===userId);
+    if(idx>=0)DB.users[idx]=updated;
+    closeModal();renderSettings();
+  }catch(e){alert('Помилка: '+e.message);}
+}
+
+async function deleteUser(userId){
+  if(userId===currentUser.id){alert('Не можна видалити власний акаунт');return;}
+  const user=DB.users.find(u=>u.id===userId);
+  if(!user||!confirm(`Видалити користувача "${user.name}"?`))return;
+  try{
+    await api('/api/users/'+userId,{method:'DELETE'});
+    DB.users=DB.users.filter(u=>u.id!==userId);
+    renderSettings();
+  }catch(e){alert('Помилка: '+e.message);}
+}
+
+function showModal(html){document.getElementById('modal-root').innerHTML=`<div class="mo" onclick="closeModal()">${html}</div>`;}
+function closeModal(){document.getElementById('modal-root').innerHTML='';}
+
+// ── CUSTOM DATEPICKER ──
+const MONTHS_UA=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+const DOWS_UA=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'];
+let _cdpOpen=null;
+function closeCdp(){if(_cdpOpen){_cdpOpen.remove();_cdpOpen=null;}document.removeEventListener('click',_cdpDocClick);}
+function _cdpDocClick(e){if(_cdpOpen&&!_cdpOpen.contains(e.target))closeCdp();}
+function openCdp(triggerEl,currentVal,onPick){
+  closeCdp();
+  const rect=triggerEl.getBoundingClientRect();
+  const d=currentVal?new Date(currentVal+'T00:00'):new Date();
+  let yr=d.getFullYear(),mo=d.getMonth();
+  const div=document.createElement('div');
+  div.className='cdp';
+  div.style.position='fixed';
+  div.style.top=(rect.bottom+4)+'px';
+  div.style.left=rect.left+'px';
+  _cdpOpen=div;
+  function renderCal(){
+    const todayStr=today();
+    const selStr=currentVal||'';
+    const first=new Date(yr,mo,1);
+    const startDow=(first.getDay()+6)%7;
+    const daysInMonth=new Date(yr,mo+1,0).getDate();
+    const prevDays=new Date(yr,mo,0).getDate();
+    let cells='';
+    for(let i=0;i<startDow;i++){
+      const dn=prevDays-startDow+1+i;
+      cells+=`<div class="cdp-day other">${dn}</div>`;
+    }
+    for(let i=1;i<=daysInMonth;i++){
+      const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+      const cls=(ds===selStr?'sel':'')+(ds===todayStr?' today':'');
+      cells+=`<div class="cdp-day ${cls}" data-d="${ds}">${i}</div>`;
+    }
+    const totalCells=startDow+daysInMonth;
+    const rem=totalCells%7?7-totalCells%7:0;
+    for(let i=1;i<=rem;i++){
+      cells+=`<div class="cdp-day other">${i}</div>`;
+    }
+    div.innerHTML=`<div class="cdp-hdr"><div class="cdp-title">${MONTHS_UA[mo]} ${yr}</div><div class="cdp-nav"><button onclick="event.stopPropagation()">‹</button><button onclick="event.stopPropagation()">›</button></div></div>
+      <div class="cdp-grid">${DOWS_UA.map(d=>`<div class="cdp-dow">${d}</div>`).join('')}${cells}</div>
+      <div class="cdp-foot"><button class="cdp-clear" onclick="event.stopPropagation()">Очистити</button><button class="cdp-today" onclick="event.stopPropagation()">Сьогодні</button></div>`;
+    div.querySelectorAll('.cdp-day:not(.other)').forEach(el=>{
+      el.addEventListener('click',e=>{e.stopPropagation();currentVal=el.dataset.d;onPick(currentVal);closeCdp();});
+    });
+    const [prevBtn,nextBtn]=div.querySelectorAll('.cdp-nav button');
+    prevBtn.addEventListener('click',e=>{e.stopPropagation();mo--;if(mo<0){mo=11;yr--;}renderCal();});
+    nextBtn.addEventListener('click',e=>{e.stopPropagation();mo++;if(mo>11){mo=0;yr++;}renderCal();});
+    div.querySelector('.cdp-clear').addEventListener('click',e=>{e.stopPropagation();onPick('');closeCdp();});
+    div.querySelector('.cdp-today').addEventListener('click',e=>{e.stopPropagation();currentVal=todayStr;onPick(currentVal);closeCdp();});
+  }
+  renderCal();
+  document.body.appendChild(div);
+  setTimeout(()=>document.addEventListener('click',_cdpDocClick),10);
+}
+function cdpTrigger(id,label,val,onPickFn){
+  return`<div class="cdp-trigger ${val?'has-val':''}" id="${id}" onclick="openCdp(this,'${val||''}',${onPickFn})">${label}: ${val||'—'}</div>`;
+}
+
+function updateUserSection(){
+  const userSec=document.getElementById('user-section');
+  if(!userSec)return;
+  if(currentUser&&currentUser.role!=='admin'){
+    userSec.innerHTML=`
+      <div style="padding:8px 0;color:var(--t3);font-size:11px;letter-spacing:1px;text-transform:uppercase">Користувач</div>
+      <div style="padding:8px 12px;margin-bottom:8px;background:var(--s2);border-radius:7px;border:1px solid var(--b1)">
+        <div style="font-size:13px;color:var(--t1);font-weight:500">${currentUser.name}</div>
+        <div style="font-size:11px;color:var(--t3);font-family:var(--fm)">${currentUser.email}</div>
+      </div>
+      <button class="btn bg bs" style="width:100%;font-size:12px" onclick="logout()">🚪 Вихід</button>
+    `;
+  } else {
+    userSec.innerHTML='';
   }
 }
 
-async function saveSysSettings() {
-  DB.teams = document.getElementById('teams-in').value.split(',').map(s => s.trim()).filter(Boolean);
-  DB.categories = document.getElementById('cats-in').value.split(',').map(s => s.trim()).filter(Boolean);
-  await saveDB();
-  renderView();
-}
-
-// ── Modal ─────────────────────────────────────────────────
-function showModal(html) {
-  const root = document.getElementById('modal-root');
-  root.innerHTML = `<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;
-}
-function closeModal() {
-  document.getElementById('modal-root').innerHTML = '';
-}
-
-// ── Init ──────────────────────────────────────────────────
-(async function init() {
-  const ok = await loadMe();
-  if (ok) {
-    try { await loadDB(); } catch {}
+// Bootstrap on load
+async function bootstrap(){
+  try{
+    const{user}=await api('/api/me');
+    currentUser=user;
+    await loadDBFromServer();
+  }catch(e){
+    currentUser=null;
   }
-  renderApp();
-})();
+  ub();render();updateUserSection();
+}
+bootstrap();
 </script>
 </body>
 </html>
