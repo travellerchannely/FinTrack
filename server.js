@@ -107,7 +107,7 @@ function sanitizeDB(db) {
 }
 
 // ── Middleware ────────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 
 function requireAuth(req, res, next) {
@@ -256,6 +256,66 @@ app.delete('/api/users/:id', requireAuth, requireAdmin, (req, res) => {
   saveSessions(SESSIONS);
   saveDB(db);
   res.json({ ok: true });
+});
+
+// ── Bulk import (Finmap) ──────────────────────────────────────
+// Body: { transactions: [...], sites: {domain: {team,...}}, teams: [str], categories: [str], dedupe: true }
+app.post('/api/import', requireAuth, requireAdmin, (req, res) => {
+  const { transactions = [], sites = {}, teams = [], categories = [], dedupe = true } = req.body || {};
+  if (!Array.isArray(transactions)) return res.status(400).json({ error: 'transactions має бути масивом' });
+
+  const db = loadDB();
+  db.transactions = db.transactions || [];
+  db.sites = db.sites || {};
+  db.teams = db.teams || [];
+  db.categories = db.categories || [];
+  db.nextTxId = db.nextTxId || (db.transactions.reduce((m, t) => Math.max(m, t.id || 0), 0) + 1);
+
+  // Add new teams / categories
+  let addedTeams = 0, addedCats = 0;
+  for (const t of teams) if (t && !db.teams.includes(t)) { db.teams.push(t); addedTeams++; }
+  for (const c of categories) if (c && !db.categories.includes(c)) { db.categories.push(c); addedCats++; }
+
+  // Add new sites
+  let addedSites = 0;
+  for (const [domain, info] of Object.entries(sites)) {
+    if (!domain) continue;
+    if (!db.sites[domain]) {
+      db.sites[domain] = { ...(info || {}), createdAt: new Date().toISOString() };
+      addedSites++;
+    }
+  }
+
+  // Build dedupe index
+  const hash = t => `${t.date}|${Number(t.amount).toFixed(2)}|${t.site || ''}|${(t.description || '').trim()}`;
+  const existingHashes = dedupe ? new Set(db.transactions.map(hash)) : null;
+
+  let added = 0, skipped = 0;
+  for (const t of transactions) {
+    if (!t || typeof t !== 'object') { skipped++; continue; }
+    if (!t.date || t.amount == null) { skipped++; continue; }
+    if (dedupe && existingHashes.has(hash(t))) { skipped++; continue; }
+    const tx = {
+      id: db.nextTxId++,
+      date: t.date,
+      amount: Number(t.amount),
+      description: t.description || '',
+      category: t.category || '',
+      team: t.team || '',
+      site: t.site || '',
+      counterparty: t.counterparty || '',
+      tags: t.tags || '',
+      source: 'finmap-import',
+      importedAt: new Date().toISOString(),
+      createdBy: req.user.id
+    };
+    db.transactions.push(tx);
+    if (existingHashes) existingHashes.add(hash(tx));
+    added++;
+  }
+
+  saveDB(db);
+  res.json({ ok: true, added, skipped, addedSites, addedTeams, addedCats });
 });
 
 // ── Static / SPA ──────────────────────────────────────────────
