@@ -295,6 +295,21 @@ function importRows(rows){
   const sites={},seos={},txs=[],teamsSet=new Set(),catsIncome=new Set(),catsExpense=new Set();
   let splitGroups=0,splitTxs=0;
 
+  // ── Канонікалізація імен (case-insensitive merge) ─────────
+  // Для команд/категорій/SEO: existing DB.teams і first-encountered
+  // варіант стають канонічними. Усе інше зводиться до них.
+  const canonTeams=new Map();
+  (DB.teams||[]).forEach(t=>{if(t&&!canonTeams.has(String(t).toLowerCase()))canonTeams.set(String(t).toLowerCase(),t);});
+  const canonCats=new Map();
+  [...(DB.catIncome||[]),...(DB.catExpense||[])].forEach(c=>{if(c&&!canonCats.has(String(c).toLowerCase()))canonCats.set(String(c).toLowerCase(),c);});
+  const canonSeos=new Map();
+  Object.keys(DB.seos||{}).forEach(h=>{if(h&&!canonSeos.has(String(h).toLowerCase()))canonSeos.set(String(h).toLowerCase(),h);});
+
+  function normTeam(t){if(!t)return t;const s=String(t).trim();if(!s)return'';const k=s.toLowerCase();if(!canonTeams.has(k))canonTeams.set(k,s);return canonTeams.get(k);}
+  function normCat(c){if(!c)return c;const s=String(c).trim();if(!s)return'';const k=s.toLowerCase();if(!canonCats.has(k))canonCats.set(k,s);return canonCats.get(k);}
+  function normSeo(h){if(!h)return h;const s=String(h).trim();if(!s)return'';const k=s.toLowerCase();if(!canonSeos.has(k))canonSeos.set(k,s);return canonSeos.get(k);}
+  function applyCanon(tx){if(!tx)return tx;tx.team=normTeam(tx.team);tx.category=normCat(tx.category);tx.seo=normSeo(tx.seo);return tx;}
+
   // Перший прохід: групуємо рядки на (parent, splits[])
   const groups=[];
   for(const row of rows){
@@ -317,7 +332,7 @@ function importRows(rows){
   }
 
   for(const g of groups){
-    const parentTx=_mapFinmapRow(g.parent, txs.length);
+    const parentTx=applyCanon(_mapFinmapRow(g.parent, txs.length));
     if(g.splits.length===0){
       if(parentTx){
         txs.push(parentTx);
@@ -331,7 +346,7 @@ function importRows(rows){
     // знак успадковуємо від parent
     const sign = parentTx.amount<0 ? -1 : (parentTx.amount>0 ? +1 : 1);
     for(const s of g.splits){
-      const splitTeam=String(s['Проект']||'').trim();
+      const splitTeam=normTeam(String(s['Проект']||'').trim());
       const splitAmt=Math.abs(parseFloat(s['Сума в валюті компанії'])||0);
       if(!splitAmt) continue;
       const tx={
@@ -350,6 +365,48 @@ function importRows(rows){
   }
   const teams=[...teamsSet].filter(t=>t!=='Архів Slot'&&t!=='Дівіденди');
   return{sites,seos,transactions:txs,teams,catIncome:[...catsIncome].sort(),catExpense:[...catsExpense].sort(),splitGroups,splitTxs};
+}
+
+// ── Case-insensitive dedupe для existing DB ────────────────
+// Після кожного імпорту: видаляє дублікати на кшталт ["Fortuna", "fortuna"]
+// → залишає тільки "Fortuna" (першу зустрінуту), і переписує всі transactions/sites
+// щоб посилались на канонічну назву.
+function normalizeDBCase(){
+  if(!DB||!DB.teams)return;
+  const canonTeams=new Map();
+  DB.teams.forEach(t=>{if(!t)return;const k=String(t).toLowerCase();if(!canonTeams.has(k))canonTeams.set(k,t);});
+  DB.teams=[...new Set([...canonTeams.values()])];
+
+  const canonCats=new Map();
+  [...(DB.catIncome||[]),...(DB.catExpense||[])].forEach(c=>{if(!c)return;const k=String(c).toLowerCase();if(!canonCats.has(k))canonCats.set(k,c);});
+  if(DB.catIncome)DB.catIncome=[...new Set(DB.catIncome.map(c=>canonCats.get(String(c).toLowerCase())||c))];
+  if(DB.catExpense)DB.catExpense=[...new Set(DB.catExpense.map(c=>canonCats.get(String(c).toLowerCase())||c))];
+
+  const canonSeos=new Map();
+  Object.keys(DB.seos||{}).forEach(h=>{if(!h)return;const k=h.toLowerCase();if(!canonSeos.has(k))canonSeos.set(k,h);});
+
+  // Переписуємо team у транзакціях
+  (DB.transactions||[]).forEach(t=>{
+    if(t.team){const k=String(t.team).toLowerCase();if(canonTeams.has(k))t.team=canonTeams.get(k);}
+    if(t.category){const k=String(t.category).toLowerCase();if(canonCats.has(k))t.category=canonCats.get(k);}
+    if(t.seo){const k=String(t.seo).toLowerCase();if(canonSeos.has(k))t.seo=canonSeos.get(k);}
+  });
+  // Переписуємо team/seo у сайтах
+  Object.keys(DB.sites||{}).forEach(d=>{
+    const s=DB.sites[d];
+    if(s.team){const k=String(s.team).toLowerCase();if(canonTeams.has(k))s.team=canonTeams.get(k);}
+    if(s.seo){const k=String(s.seo).toLowerCase();if(canonSeos.has(k))s.seo=canonSeos.get(k);}
+  });
+  // Збираємо дублі в DB.seos: переносимо сайти з не-канонічних SEO до канонічних
+  if(DB.seos){
+    const newSeos={};
+    for(const[h,info]of Object.entries(DB.seos)){
+      const k=h.toLowerCase();
+      const canonical=canonSeos.get(k)||h;
+      if(!newSeos[canonical])newSeos[canonical]={...info};
+    }
+    DB.seos=newSeos;
+  }
 }
 function exportToXlsx(){
   if(!window.XLSX){alert('XLSX бібліотека ще завантажується');return;}
@@ -1780,6 +1837,7 @@ async function hFile(file){
       } else {
         const users=DB.users;Object.assign(DB,data);if(users&&!data.users)DB.users=users;
       }
+      normalizeDBCase();
       saveDB();ub();
       st.innerHTML='<div class="alrt as">✓ JSON бекап імпортовано</div>';
       setTimeout(()=>sv('dash'),1500);return;
@@ -1805,6 +1863,8 @@ async function hFile(file){
       if(parsed.catExpense&&parsed.catExpense.length)DB.catExpense=parsed.catExpense;
       if(users)DB.users=users;
     }
+    // Фінальний дедуп: зливаємо case-різні команди/категорії/SEO у DB
+    normalizeDBCase();
     st.innerHTML='<div class="alrt ai">Зберігаємо у базу...</div>';
     saveDB();ub();
     const tc=parsed.transactions.length,sc=Object.keys(parsed.sites).length,se=Object.keys(parsed.seos).length;
