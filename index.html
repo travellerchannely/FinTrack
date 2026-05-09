@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FinTrack — Фінансовий облік</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root {
   --bg:#0f1419; --s1:#1a1f29; --s2:#0f1419; --cd:#1a1f29; --bd:#2a3140;
@@ -192,6 +193,7 @@ function renderShell() {
     { id: 'sites', icon: '🌐', label: 'Сайти' },
     { id: 'analytics', icon: '📈', label: 'Аналітика' },
     isAdmin ? { id: 'users', icon: '👥', label: 'Користувачі' } : null,
+    isAdmin ? { id: 'import', icon: '📥', label: 'Імпорт з Finmap' } : null,
     { id: 'settings', icon: '⚙️', label: 'Налаштування' }
   ].filter(Boolean);
 
@@ -232,7 +234,7 @@ function setView(v) {
   renderView();
 }
 
-const TITLES = { dash:'Огляд', tx:'Транзакції', sites:'Сайти', analytics:'Аналітика', users:'Користувачі', settings:'Налаштування' };
+const TITLES = { dash:'Огляд', tx:'Транзакції', sites:'Сайти', analytics:'Аналітика', users:'Користувачі', import:'Імпорт з Finmap', settings:'Налаштування' };
 
 function renderView() {
   document.getElementById('page-title').textContent = TITLES[VIEW] || VIEW;
@@ -244,6 +246,7 @@ function renderView() {
     case 'sites':     c.innerHTML = renderSites(); break;
     case 'analytics': c.innerHTML = renderAnalytics(); break;
     case 'users':     c.innerHTML = renderUsers(); break;
+    case 'import':    c.innerHTML = renderImport(); break;
     case 'settings':  c.innerHTML = renderSettings(); break;
     default:          c.innerHTML = '<div class="cd">Невідомий розділ</div>';
   }
@@ -647,6 +650,234 @@ async function deleteUser(id) {
     DB.users = DB.users.filter(u => u.id !== id);
     renderView();
   } catch (e) { alert(e.message); }
+}
+
+// ── Import from Finmap ────────────────────────────────────
+let IMPORT_DATA = null; // { rows, mapped, summary }
+
+const FINMAP_INCOME_CATS = ['CPA', 'RevShare', 'Bonus', 'Hybrid', 'Flat', 'Категорії доходу'];
+
+function parseFinmapAccount(raw) {
+  if (!raw) return { team: '', site: '' };
+  const s = String(raw).trim();
+  const m = s.match(/^\(([^)]+)\)\s*(.+)$/);
+  if (m) return { team: m[1].trim(), site: m[2].trim().toLowerCase() };
+  return { team: '', site: s.toLowerCase() };
+}
+
+function toIsoDate(v) {
+  if (!v) return '';
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  // SheetJS may return a number (Excel serial) or a string
+  if (typeof v === 'number') {
+    const d = XLSX.SSF.parse_date_code(v);
+    if (!d) return '';
+    return `${d.y.toString().padStart(4,'0')}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+  }
+  const s = String(v).trim();
+  // try ISO-ish
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  return '';
+}
+
+function mapFinmapRow(row) {
+  // row is array of cells in order
+  const datePay = row[0], dateAccr = row[1];
+  const amountCo = row[5];
+  const fromAcc = row[6], toAcc = row[7];
+  const category = (row[8] || '').toString().trim();
+  const subcategory = (row[9] || '').toString().trim();
+  const counterparty = (row[10] || '').toString().trim();
+  const project = (row[12] || '').toString().trim();
+  const tags = (row[14] || '').toString().trim();
+  const comment = (row[15] || '').toString().trim();
+
+  if (amountCo == null || amountCo === '') return null;
+  const date = toIsoDate(datePay) || toIsoDate(dateAccr);
+  if (!date) return null;
+
+  const fromInfo = parseFinmapAccount(fromAcc);
+  const toInfo = parseFinmapAccount(toAcc);
+
+  // sign: incoming (only "На рахунок") = +; outgoing (only "З рахунку") = -; neither → use category
+  let sign;
+  if (toAcc && !fromAcc) sign = +1;
+  else if (fromAcc && !toAcc) sign = -1;
+  else sign = FINMAP_INCOME_CATS.includes(category) ? +1 : -1;
+
+  const amount = sign * Math.abs(Number(amountCo) || 0);
+  // Site: prefer the "outside" account: outgoing → from; incoming → to
+  const site = sign < 0 ? fromInfo.site : toInfo.site;
+  const team = project || fromInfo.team || toInfo.team || '';
+  const description = [comment, subcategory && `(${subcategory})`, tags && `[${tags}]`].filter(Boolean).join(' ').trim();
+
+  return { date, amount, category, team, site, counterparty, tags, description };
+}
+
+function parseFinmapWorkbook(wb) {
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const arr = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+  if (!arr.length) return { rows: [], mapped: [], summary: {} };
+  // header row may be the first non-empty
+  let headerIdx = 0;
+  for (let i = 0; i < arr.length && i < 5; i++) {
+    if (arr[i] && arr[i].some(c => typeof c === 'string' && /Дата платежу/i.test(c))) { headerIdx = i; break; }
+  }
+  const dataRows = arr.slice(headerIdx + 1).filter(r => r && r.some(v => v != null && v !== ''));
+  const mapped = [];
+  let skipped = 0;
+  const newSites = {}, newTeams = new Set(), newCats = new Set();
+  for (const row of dataRows) {
+    const m = mapFinmapRow(row);
+    if (!m) { skipped++; continue; }
+    mapped.push(m);
+    if (m.site && !DB.sites[m.site] && !newSites[m.site]) {
+      newSites[m.site] = { team: m.team };
+    }
+    if (m.team && !(DB.teams || []).includes(m.team)) newTeams.add(m.team);
+    if (m.category && !(DB.categories || []).includes(m.category)) newCats.add(m.category);
+  }
+
+  const income = mapped.filter(t => t.amount > 0);
+  const expense = mapped.filter(t => t.amount < 0);
+  const totalIncome = income.reduce((s, t) => s + t.amount, 0);
+  const totalExpense = expense.reduce((s, t) => s + t.amount, 0);
+
+  return {
+    rows: dataRows.length,
+    mapped,
+    skipped,
+    newSites,
+    newTeams: [...newTeams],
+    newCats: [...newCats],
+    summary: { total: mapped.length, income: income.length, expense: expense.length, totalIncome, totalExpense }
+  };
+}
+
+function renderImport() {
+  if (CURRENT_USER.role !== 'admin') return '<div class="cd">Доступ заборонено</div>';
+
+  if (!IMPORT_DATA) {
+    return `
+      <div class="cd">
+        <div style="font-weight:600;margin-bottom:6px">Імпорт з Finmap</div>
+        <div style="color:var(--t3);font-size:13px;margin-bottom:18px">
+          Завантажте .xlsx експорт з Finmap. Парсер витягне дату, суму, команду (Проект), категорію, сайт (з рахунку),
+          контрагента і коментар. Дублікати (за датою + сумою + сайтом + описом) пропустяться.
+        </div>
+        <input type="file" id="imp-file" accept=".xlsx,.xls" onchange="handleFinmapFile(event)" style="margin-bottom:14px">
+        <div id="imp-status" style="color:var(--t3);font-size:13px"></div>
+      </div>`;
+  }
+
+  const d = IMPORT_DATA;
+  const previewRows = d.mapped.slice(0, 12);
+  return `
+    <div class="cd" style="margin-bottom:14px">
+      <div style="font-weight:600;margin-bottom:14px">Готово до імпорту</div>
+      <div class="kpis">
+        <div class="kpi"><div class="l">Рядків у файлі</div><div class="v">${d.rows.toLocaleString()}</div></div>
+        <div class="kpi"><div class="l">Розпізнано</div><div class="v">${d.summary.total.toLocaleString()}</div></div>
+        <div class="kpi"><div class="l">Пропущено</div><div class="v">${d.skipped.toLocaleString()}</div></div>
+        <div class="kpi"><div class="l">Доходи</div><div class="v ap">${fmtMoney(d.summary.totalIncome)}</div></div>
+        <div class="kpi"><div class="l">Витрати</div><div class="v an">${fmtMoney(d.summary.totalExpense)}</div></div>
+        <div class="kpi"><div class="l">Чистий</div><div class="v ${d.summary.totalIncome+d.summary.totalExpense>=0?'ap':'an'}">${fmtMoney(d.summary.totalIncome+d.summary.totalExpense)}</div></div>
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">
+        <div style="flex:1;min-width:200px"><span style="color:var(--t3)">Нові сайти:</span> <b>${Object.keys(d.newSites).length}</b></div>
+        <div style="flex:1;min-width:200px"><span style="color:var(--t3)">Нові команди:</span> <b>${d.newTeams.length}</b> ${d.newTeams.length ? '— ' + d.newTeams.map(escapeHtml).join(', ') : ''}</div>
+        <div style="flex:1;min-width:200px"><span style="color:var(--t3)">Нові категорії:</span> <b>${d.newCats.length}</b> ${d.newCats.length ? '— ' + d.newCats.map(escapeHtml).join(', ') : ''}</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px">
+        <input type="checkbox" id="imp-dedupe" checked> Пропускати дублікати (дата + сума + сайт + опис)
+      </label>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="cancelImport()">Скасувати</button>
+        <button class="btn bp" onclick="confirmImport()" id="imp-go">Імпортувати ${d.summary.total.toLocaleString()} транзакцій</button>
+      </div>
+      <div class="err" id="imp-err"></div>
+    </div>
+    <div class="cd" style="padding:0">
+      <div style="padding:14px 18px;font-weight:600;border-bottom:1px solid var(--bd)">Перші ${previewRows.length} рядків</div>
+      <table class="tbl">
+        <thead><tr><th>Дата</th><th>Сума</th><th>Категорія</th><th>Команда</th><th>Сайт</th><th>Опис</th></tr></thead>
+        <tbody>
+          ${previewRows.map(t => `<tr>
+            <td>${fmtDate(t.date)}</td>
+            <td class="${t.amount>=0?'ap':'an'}" style="text-align:right">${fmtMoney(t.amount)}</td>
+            <td>${t.category ? `<span class="bc">${escapeHtml(t.category)}</span>` : '—'}</td>
+            <td>${t.team ? teamBadge(t.team) : '—'}</td>
+            <td style="font-size:12px;color:var(--t2)">${escapeHtml(t.site || '—')}</td>
+            <td style="font-size:12px;color:var(--t2);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t.description || '—')}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function handleFinmapFile(ev) {
+  const file = ev.target.files?.[0];
+  if (!file) return;
+  const status = document.getElementById('imp-status');
+  status.textContent = 'Читаю файл...';
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      status.textContent = 'Парсю xlsx...';
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array', cellDates: true });
+      status.textContent = 'Маплю на сутності...';
+      // Async to allow UI repaint
+      setTimeout(() => {
+        try {
+          IMPORT_DATA = parseFinmapWorkbook(wb);
+          renderView();
+        } catch (err) {
+          status.textContent = 'Помилка парсингу: ' + err.message;
+        }
+      }, 30);
+    } catch (err) {
+      status.textContent = 'Не вдалося прочитати файл: ' + err.message;
+    }
+  };
+  reader.onerror = () => { status.textContent = 'Помилка читання файлу'; };
+  reader.readAsArrayBuffer(file);
+}
+
+function cancelImport() {
+  IMPORT_DATA = null;
+  renderView();
+}
+
+async function confirmImport() {
+  if (!IMPORT_DATA) return;
+  const btn = document.getElementById('imp-go');
+  const err = document.getElementById('imp-err');
+  const dedupe = document.getElementById('imp-dedupe').checked;
+  err.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Імпортую...';
+  try {
+    const body = {
+      transactions: IMPORT_DATA.mapped,
+      sites: IMPORT_DATA.newSites,
+      teams: IMPORT_DATA.newTeams,
+      categories: IMPORT_DATA.newCats,
+      dedupe
+    };
+    const res = await api('/api/import', { method: 'POST', body });
+    err.style.color = 'var(--gn)';
+    err.textContent = `Готово: додано ${res.added}, пропущено ${res.skipped}, нових сайтів ${res.addedSites}, команд ${res.addedTeams}, категорій ${res.addedCats}`;
+    IMPORT_DATA = null;
+    await loadDB();
+    setTimeout(() => { setView('tx'); }, 1500);
+  } catch (e) {
+    err.style.color = 'var(--rd)';
+    err.textContent = 'Помилка: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Спробувати ще раз';
+  }
 }
 
 // ── Settings ──────────────────────────────────────────────
