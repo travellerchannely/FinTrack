@@ -344,14 +344,16 @@ function importRows(rows){
     }
   }
 
-  // Помічник для збору сутностей з транзакції
+  // Помічник для збору сутностей з транзакції.
+  // Якщо у транзакції немає команди (системні рахунки типу "Support") —
+  // сайт все одно створюється, але без team (показується як "—").
   function collect(tx, isExp){
     if(tx.team) teamsSet.add(tx.team);
     if(tx.category){
       if(isExp) catsExpense.add(tx.category); else catsIncome.add(tx.category);
     }
-    if(tx.site && tx.team && !sites[tx.site]) sites[tx.site]={team:tx.team,seo:tx.seo,seoName:tx.seoName};
-    if(tx.seo && !seos[tx.seo]) seos[tx.seo]={name:tx.seoName||tx.seo,team:tx.team};
+    if(tx.site && !sites[tx.site]) sites[tx.site]={team:tx.team||null,seo:tx.seo||null,seoName:tx.seoName||null};
+    if(tx.seo && !seos[tx.seo]) seos[tx.seo]={name:tx.seoName||tx.seo,team:tx.team||null};
   }
 
   for(const g of groups){
@@ -645,7 +647,9 @@ function ub(){
   document.getElementById('nb-tx').textContent=active.length.toLocaleString();
 }
 function tbadge(t){
-  if(!t)return'<span style="color:var(--t3)">Видалена команда</span>';
+  if(!t)return'<span style="color:var(--t3)">—</span>';
+  const teams=getTeams();
+  if(!teams.includes(t))return`<span style="color:var(--t3)" title="Команда видалена">${t} ✕</span>`;
   const tc={Fortuna:'tF',Phoenix:'tP',Baza:'tB',Brand:'tBr',Review:'tR'};
   const cls=tc[t]||'';
   return`<span class="bt ${cls}">${t}</span>`;
