@@ -715,28 +715,83 @@ function mapFinmapRow(row) {
   return { date, amount, category, team, site, counterparty, tags, description };
 }
 
+// Split-row детектор:
+// рядок-частина має: дата=null, сума!=null, команда!=null, категорія=null, обидва рахунки=null
+function isFinmapSplit(r) {
+  return (r[0] == null) && (r[5] != null) && (r[12] != null && String(r[12]).trim() !== '')
+      && (r[6] == null || r[6] === '') && (r[7] == null || r[7] === '')
+      && (r[8] == null || String(r[8]).trim() === '');
+}
+
+function collectEntities(t, newSites, newTeams, newCats) {
+  if (t.site && !DB.sites[t.site] && !newSites[t.site]) newSites[t.site] = { team: t.team };
+  if (t.team && !(DB.teams || []).includes(t.team)) newTeams.add(t.team);
+  if (t.category && !(DB.categories || []).includes(t.category)) newCats.add(t.category);
+}
+
 function parseFinmapWorkbook(wb) {
   const ws = wb.Sheets[wb.SheetNames[0]];
   const arr = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
-  if (!arr.length) return { rows: [], mapped: [], summary: {} };
-  // header row may be the first non-empty
+  if (!arr.length) return { rows: 0, mapped: [], skipped: 0, newSites: {}, newTeams: [], newCats: [], summary: {} };
   let headerIdx = 0;
   for (let i = 0; i < arr.length && i < 5; i++) {
     if (arr[i] && arr[i].some(c => typeof c === 'string' && /Дата платежу/i.test(c))) { headerIdx = i; break; }
   }
   const dataRows = arr.slice(headerIdx + 1).filter(r => r && r.some(v => v != null && v !== ''));
+
+  // Group rows: each non-split row starts a group; subsequent split rows attach to it
+  const groups = [];
+  for (const row of dataRows) {
+    if (isFinmapSplit(row)) {
+      if (groups.length) groups[groups.length - 1].splits.push(row);
+      // якщо split йде без батьківського рядка — ігноруємо
+    } else {
+      groups.push({ parent: row, splits: [] });
+    }
+  }
+
   const mapped = [];
   let skipped = 0;
+  let splitGroups = 0, splitTxs = 0;
   const newSites = {}, newTeams = new Set(), newCats = new Set();
-  for (const row of dataRows) {
-    const m = mapFinmapRow(row);
-    if (!m) { skipped++; continue; }
-    mapped.push(m);
-    if (m.site && !DB.sites[m.site] && !newSites[m.site]) {
-      newSites[m.site] = { team: m.team };
+
+  for (const g of groups) {
+    const parentMapped = mapFinmapRow(g.parent);
+    if (g.splits.length === 0) {
+      if (parentMapped) {
+        mapped.push(parentMapped);
+        collectEntities(parentMapped, newSites, newTeams, newCats);
+      } else {
+        skipped++;
+      }
+      continue;
     }
-    if (m.team && !(DB.teams || []).includes(m.team)) newTeams.add(m.team);
-    if (m.category && !(DB.categories || []).includes(m.category)) newCats.add(m.category);
+    // parent has splits — expand
+    if (!parentMapped) {
+      // якщо у parent немає дати — пропускаємо групу (раритетний випадок, бо ми бачили рядок 282 з датою)
+      skipped += 1 + g.splits.length;
+      continue;
+    }
+    splitGroups++;
+    const sign = parentMapped.amount < 0 ? -1
+               : parentMapped.amount > 0 ? +1
+               : (FINMAP_INCOME_CATS.includes(parentMapped.category) ? +1 : -1);
+    for (const s of g.splits) {
+      const splitTeam = (s[12] || '').toString().trim();
+      const splitAmount = Math.abs(Number(s[5]) || 0);
+      if (!splitAmount) { skipped++; continue; }
+      const tx = {
+        ...parentMapped,
+        team: splitTeam,
+        amount: sign * splitAmount,
+        description: parentMapped.description
+          ? `${parentMapped.description} · split→${splitTeam}`
+          : `Split → ${splitTeam}`
+      };
+      mapped.push(tx);
+      collectEntities(tx, newSites, newTeams, newCats);
+      splitTxs++;
+    }
   }
 
   const income = mapped.filter(t => t.amount > 0);
@@ -751,6 +806,7 @@ function parseFinmapWorkbook(wb) {
     newSites,
     newTeams: [...newTeams],
     newCats: [...newCats],
+    splitGroups, splitTxs,
     summary: { total: mapped.length, income: income.length, expense: expense.length, totalIncome, totalExpense }
   };
 }
@@ -788,6 +844,9 @@ function renderImport() {
         <div style="flex:1;min-width:200px"><span style="color:var(--t3)">Нові сайти:</span> <b>${Object.keys(d.newSites).length}</b></div>
         <div style="flex:1;min-width:200px"><span style="color:var(--t3)">Нові команди:</span> <b>${d.newTeams.length}</b> ${d.newTeams.length ? '— ' + d.newTeams.map(escapeHtml).join(', ') : ''}</div>
         <div style="flex:1;min-width:200px"><span style="color:var(--t3)">Нові категорії:</span> <b>${d.newCats.length}</b> ${d.newCats.length ? '— ' + d.newCats.map(escapeHtml).join(', ') : ''}</div>
+      </div>
+      <div style="color:var(--t3);font-size:13px;margin-bottom:14px">
+        Розщеплених транзакцій: <b style="color:var(--t1)">${d.splitGroups || 0}</b> груп → <b style="color:var(--t1)">${d.splitTxs || 0}</b> окремих транзакцій по командах
       </div>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px">
         <input type="checkbox" id="imp-dedupe" checked> Пропускати дублікати (дата + сума + сайт + опис)
