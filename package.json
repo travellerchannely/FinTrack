@@ -1,14 +1,18 @@
 {
   "name": "fintrack",
   "version": "1.0.0",
+  "description": "FinTrack — фінансовий облік (Node.js + Express, JSON DB, bcrypt auth)",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.21.0"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "express": "^4.19.2"
   }
 }
