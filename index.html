@@ -1813,7 +1813,7 @@ function renderTxRow(t){
   const showDel=canDeleteTransactions();
   return`<tr>
       <td class="fm" style="color:var(--t3);font-size:12px;white-space:nowrap">${escHtml(t.date||'—')}</td>
-      <td style="font-family:var(--fm);font-size:12px;color:var(--t1);font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.site?escHtml(t.site):'Без Сайту'}</td>
+      <td style="font-family:var(--fm);font-size:12px;color:var(--t1);font-weight:500;min-width:200px;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escAttr(t.site||'Без Сайту')}">${t.site?escHtml(t.site):'Без Сайту'}</td>
       <td>${tbadge(t.team)}</td>
       <td style="font-size:12px;color:var(--t2)">${t.seo?'@'+escHtml(t.seo):'—'}</td>
       <td>${cbadge(t.category)}</td>
@@ -1839,7 +1839,7 @@ function renderTxRows(txs){
       const showDel=canDeleteTransactions();
       html+=`<tr class="sr ${isExp?'exp':''}" onclick="toggleSplitGroup(${t.splitGroup})" style="cursor:pointer">
         <td class="fm" style="color:var(--t3);font-size:12px;white-space:nowrap"><span class="chevron ${isExp?'open':''}">▶</span>${escHtml(t.date||'—')}</td>
-        <td style="font-family:var(--fm);font-size:12px;color:var(--t1);font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.site?escHtml(t.site):'Без Сайту'}</td>
+        <td style="font-family:var(--fm);font-size:12px;color:var(--t1);font-weight:500;min-width:200px;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escAttr(t.site||'Без Сайту')}">${t.site?escHtml(t.site):'Без Сайту'}</td>
         <td>${teams.map(tt=>tbadge(tt)).join(' ')}</td>
         <td style="font-size:12px;color:var(--t2)">Розподілено</td>
         <td>${cbadge(t.category)}</td>
