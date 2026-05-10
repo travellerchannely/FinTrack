@@ -252,7 +252,13 @@ function _isFinmapSplit(row){
 // Map a single row → транзакція; повертає null, якщо не вдалось (немає дати чи суми)
 function _mapFinmapRow(row, idForTx){
   const fr=pA(row['З рахунку']),to=pA(row['На рахунок']),tag=pT(row['Теги']);
-  const site=to.site||fr.site,team=to.team||fr.team||row['Проект']||null;
+  // Команда: колонка "Проект" — це АКТУАЛЬНА команда сайту у Finmap.
+  // Префікс у "(Team) site" — лише історичний (звідки сайт спочатку),
+  // часто застарілий якщо сайт передавали між командами.
+  // Тому "Проект" має пріоритет.
+  const site=to.site||fr.site;
+  const project=(row['Проект']!=null && String(row['Проект']).trim())||null;
+  const team=project||to.team||fr.team||null;
   const isExpense=!!fr.site&&!to.site;
   const isIncome =!!to.site&&!fr.site;
   const amt=parseFloat(row['Сума в валюті компанії'])||0;
@@ -302,15 +308,18 @@ function importRows(rows){
   // ── або не виглядають як домен (немає точки) — отримують ──
   // ── суфікс команди в ключі: "Архів" → "Архів (Baza)", щоб ──
   // ── не зливались у один запис.
+  // Команда визначається ТОЧНО ТАК САМО, як у _mapFinmapRow:
+  // спочатку колонка "Проект" (актуальна), потім префікс fallback.
   const _siteTeams=new Map(); // raw site → Set of teams
   for(const row of rows){
     const fr=pA(row['З рахунку']),to=pA(row['На рахунок']);
-    for(const x of [fr,to]){
-      if(!x.site||!x.team)continue;
-      const k=x.site;
-      if(!_siteTeams.has(k))_siteTeams.set(k,new Set());
-      _siteTeams.get(k).add(x.team);
-    }
+    const site=to.site||fr.site;
+    if(!site)continue;
+    const project=(row['Проект']!=null && String(row['Проект']).trim())||null;
+    const team=project||to.team||fr.team||null;
+    if(!team)continue;
+    if(!_siteTeams.has(site))_siteTeams.set(site,new Set());
+    _siteTeams.get(site).add(team);
   }
   function uniqSiteKey(site,team){
     if(!site)return site;
