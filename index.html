@@ -730,8 +730,8 @@ function sv(v){
 }
 function ub(){
   const active=applyUserFilter(DB.transactions.filter(t=>!t.deleted));
-  document.getElementById('nb-sites').textContent=Object.keys(DB.sites).length.toLocaleString();
-  document.getElementById('nb-tx').textContent=active.length.toLocaleString();
+  document.getElementById('nb-sites').textContent=nfi(Object.keys(DB.sites).length);
+  document.getElementById('nb-tx').textContent=nfi(active.length);
 }
 function tbadge(t){
   if(!t)return'<span style="color:var(--t3)">—</span>';
@@ -743,8 +743,19 @@ function tbadge(t){
 }
 function cbadge(c){return c?`<span class="bc">${escHtml(c)}</span>`:'—';}
 function chk(ch,fn){return`<div class="cb ${ch?'c':''}" onclick="${fn}">${ch?'✓':''}</div>`;}
-function bH(v){const s=getCurSym();return v>=0?`<span class="ap">${s}${v.toFixed(2)}</span>`:`<span class="an">-${s}${Math.abs(v).toFixed(2)}</span>`;}
-function aH(v){const s=getCurSym();return v>=0?`<span class="ap">+${s}${v.toFixed(2)}</span>`:`<span class="an">-${s}${Math.abs(v).toFixed(2)}</span>`;}
+// Number formatter: 1 234 567.89 (пробіли як роздільник тисяч, крапка десяткова)
+function nf(v,dec){
+  if(v==null||isNaN(v))return'0';
+  if(dec==null)dec=2;
+  const fixed=Math.abs(Number(v)).toFixed(dec);
+  const [whole,frac]=fixed.split('.');
+  const grouped=whole.replace(/\B(?=(\d{3})+(?!\d))/g,' ');
+  return(Number(v)<0?'-':'')+grouped+(frac?'.'+frac:'');
+}
+// Integer formatter (без десяткових): 1 234 567
+function nfi(v){return nf(v,0);}
+function bH(v){const s=getCurSym();return v>=0?`<span class="ap">${s}${nf(v)}</span>`:`<span class="an">-${s}${nf(Math.abs(v))}</span>`;}
+function aH(v){const s=getCurSym();return v>=0?`<span class="ap">+${s}${nf(v)}</span>`:`<span class="an">-${s}${nf(Math.abs(v))}</span>`;}
 function txAmtDisplay(t){
   // Always show in $ (amounts stored internally in USD)
   return aH(t.amount);
@@ -753,7 +764,7 @@ function pgr(total,page,fn,px){
   if(total<=PAGE)return'';
   const tp=Math.ceil(total/PAGE),pages=[];
   for(let i=Math.max(1,page-2);i<=Math.min(tp,page+2);i++)pages.push(i);
-  return`<div class="pb"><button class="pbt" onclick="${fn}(1)">«</button><button class="pbt" onclick="${fn}(Math.max(1,${px}Page-1))">‹</button>${pages.map(p=>`<button class="pbt ${p===page?'a':''}" onclick="${fn}(${p})">${p}</button>`).join('')}<button class="pbt" onclick="${fn}(Math.min(${tp},${px}Page+1))">›</button><button class="pbt" onclick="${fn}(${tp})">»</button><span class="pi">${total.toLocaleString()} записів</span></div>`;
+  return`<div class="pb"><button class="pbt" onclick="${fn}(1)">«</button><button class="pbt" onclick="${fn}(Math.max(1,${px}Page-1))">‹</button>${pages.map(p=>`<button class="pbt ${p===page?'a':''}" onclick="${fn}(${p})">${p}</button>`).join('')}<button class="pbt" onclick="${fn}(Math.min(${tp},${px}Page+1))">›</button><button class="pbt" onclick="${fn}(${tp})">»</button><span class="pi">${nfi(total)} записів</span></div>`;
 }
 // HTML-context escape: для тексту, який вставляється в innerHTML
 function escHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -783,7 +794,7 @@ function renderDash(){
 
   document.getElementById('content').innerHTML=`
   <div class="sg">
-    <div class="sc"><div class="sl">Всього сайтів</div><div class="sv">${Object.keys(sites).length.toLocaleString()}</div></div>
+    <div class="sc"><div class="sl">Всього сайтів</div><div class="sv">${nfi(Object.keys(sites).length)}</div></div>
     <div class="sc"><div class="sl">Загальний баланс</div><div class="sv" style="font-size:22px">${bH(totalBal)}</div></div>
     <div class="sc"><div class="sl">SEO-спеціалістів</div><div class="sv">${Object.keys(seos).length}</div></div>
     <div class="sc"><div class="sl">Команд</div><div class="sv">${TEAMS.length}</div></div>
@@ -915,9 +926,9 @@ function renderAnalytics(){
     const isExp=analyticsExpTeams.has(tname);
     const rows=[`<tr class="sr ${isExp?'exp':''}" onclick="analyticsExpTeams.has('${tname}')?analyticsExpTeams.delete('${tname}'):analyticsExpTeams.add('${tname}');renderAnalytics()">
       <td><span class="chevron ${isExp?'open':''}" style="margin-right:8px">›</span>${tbadge(tname)}</td>
-      <td style="text-align:right" class="fm">${s}${tdata.income.toFixed(2)}</td>
-      <td style="text-align:right" class="fm">${s}${Math.abs(tdata.expense).toFixed(2)}</td>
-      <td style="text-align:right" class="fm">${tProfit>=0?'<span class="ap">':'<span class="an">'}${s}${Math.abs(tProfit).toFixed(2)}</span></td>
+      <td style="text-align:right" class="fm">${s}${nf(tdata.income)}</td>
+      <td style="text-align:right" class="fm">${s}${nf(Math.abs(tdata.expense))}</td>
+      <td style="text-align:right" class="fm">${tProfit>=0?'<span class="ap">':'<span class="an">'}${s}${nf(Math.abs(tProfit))}</span></td>
       <td style="text-align:right" class="fm">${tMargin.toFixed(1)}%</td>
       <td style="text-align:right" class="fm">${tRoi.toFixed(1)}%</td>
     </tr>`];
@@ -931,9 +942,9 @@ function renderAnalytics(){
         const isSeoExp=analyticsExpSeo.has(seoH);
         rows.push(`<tr class="sr ${isSeoExp?'exp':''}" onclick="event.stopPropagation();analyticsExpSeo.has('${seoH}')?analyticsExpSeo.delete('${seoH}'):analyticsExpSeo.add('${seoH}');renderAnalytics()" style="background:rgba(0,229,160,0.05)">
           <td style="padding-left:40px"><span class="chevron ${isSeoExp?'open':''}" style="margin-right:8px">›</span>@${seoH}</td>
-          <td style="text-align:right" class="fm">${s}${seoData.income.toFixed(2)}</td>
-          <td style="text-align:right" class="fm">${s}${Math.abs(seoData.expense).toFixed(2)}</td>
-          <td style="text-align:right" class="fm">${sProfit>=0?'<span class="ap">':'<span class="an">'}${s}${Math.abs(sProfit).toFixed(2)}</span></td>
+          <td style="text-align:right" class="fm">${s}${nf(seoData.income)}</td>
+          <td style="text-align:right" class="fm">${s}${nf(Math.abs(seoData.expense))}</td>
+          <td style="text-align:right" class="fm">${sProfit>=0?'<span class="ap">':'<span class="an">'}${s}${nf(Math.abs(sProfit))}</span></td>
           <td style="text-align:right" class="fm">${sMargin.toFixed(1)}%</td>
           <td style="text-align:right" class="fm">${sRoi.toFixed(1)}%</td>
         </tr>`);
@@ -946,9 +957,9 @@ function renderAnalytics(){
             const siRoi=Math.abs(siteData.expense)>0?(siProfit/Math.abs(siteData.expense)*100):0;
             rows.push(`<tr style="background:rgba(0,229,160,0.08)">
               <td style="padding-left:60px">${site}</td>
-              <td style="text-align:right" class="fm">${s}${siteData.income.toFixed(2)}</td>
-              <td style="text-align:right" class="fm">${s}${Math.abs(siteData.expense).toFixed(2)}</td>
-              <td style="text-align:right" class="fm">${siProfit>=0?'<span class="ap">':'<span class="an">'}${s}${Math.abs(siProfit).toFixed(2)}</span></td>
+              <td style="text-align:right" class="fm">${s}${nf(siteData.income)}</td>
+              <td style="text-align:right" class="fm">${s}${nf(Math.abs(siteData.expense))}</td>
+              <td style="text-align:right" class="fm">${siProfit>=0?'<span class="ap">':'<span class="an">'}${s}${nf(Math.abs(siProfit))}</span></td>
               <td style="text-align:right" class="fm">${siMargin.toFixed(1)}%</td>
               <td style="text-align:right" class="fm">${siRoi.toFixed(1)}%</td>
             </tr>`);
@@ -972,9 +983,9 @@ function renderAnalytics(){
   </div>
 
   <div class="sg">
-    <div class="sc"><div class="sl">Загальний дохід</div><div class="sv ap">${s}${total.income.toFixed(2)}</div></div>
-    <div class="sc"><div class="sl">Загальні витрати</div><div class="sv an">${s}${Math.abs(total.expense).toFixed(2)}</div></div>
-    <div class="sc"><div class="sl">Прибуток (P&L)</div><div class="sv ${total.profit>=0?'ap':'an'}">${s}${Math.abs(total.profit).toFixed(2)}</div></div>
+    <div class="sc"><div class="sl">Загальний дохід</div><div class="sv ap">${s}${nf(total.income)}</div></div>
+    <div class="sc"><div class="sl">Загальні витрати</div><div class="sv an">${s}${nf(Math.abs(total.expense))}</div></div>
+    <div class="sc"><div class="sl">Прибуток (P&L)</div><div class="sv ${total.profit>=0?'ap':'an'}">${s}${nf(Math.abs(total.profit))}</div></div>
     <div class="sc"><div class="sl">Маржинальність</div><div class="sv">${margin.toFixed(1)}%</div></div>
   </div>
 
@@ -1002,9 +1013,9 @@ function renderAnalytics(){
       topSites.map(x=>`<tr>
         <td class="fm" style="font-size:12px">${x.site}</td>
         <td>${tbadge(x.team)}</td>
-        <td style="text-align:right" class="fm">${s}${x.income.toFixed(2)}</td>
-        <td style="text-align:right" class="fm">${s}${Math.abs(x.expense).toFixed(2)}</td>
-        <td style="text-align:right" class="fm">${x.profit>=0?'<span class="ap">':'<span class="an">'}${s}${Math.abs(x.profit).toFixed(2)}</span></td>
+        <td style="text-align:right" class="fm">${s}${nf(x.income)}</td>
+        <td style="text-align:right" class="fm">${s}${nf(Math.abs(x.expense))}</td>
+        <td style="text-align:right" class="fm">${x.profit>=0?'<span class="ap">':'<span class="an">'}${s}${nf(Math.abs(x.profit))}</span></td>
       </tr>`).join('')}
       </tbody></table>
     </div>
@@ -1019,9 +1030,9 @@ function renderAnalytics(){
         <td class="fm" style="font-size:12px">@${x.seo}</td>
         <td>${tbadge(x.team)}</td>
         <td style="text-align:center" class="fm">${x.sitesCount}</td>
-        <td style="text-align:right" class="fm">${s}${x.income.toFixed(2)}</td>
-        <td style="text-align:right" class="fm">${s}${Math.abs(x.expense).toFixed(2)}</td>
-        <td style="text-align:right" class="fm">${x.profit>=0?'<span class="ap">':'<span class="an">'}${s}${Math.abs(x.profit).toFixed(2)}</span></td>
+        <td style="text-align:right" class="fm">${s}${nf(x.income)}</td>
+        <td style="text-align:right" class="fm">${s}${nf(Math.abs(x.expense))}</td>
+        <td style="text-align:right" class="fm">${x.profit>=0?'<span class="ap">':'<span class="an">'}${s}${nf(Math.abs(x.profit))}</span></td>
       </tr>`).join('')}
       </tbody></table>
     </div>
@@ -1032,7 +1043,7 @@ function renderAnalytics(){
       <div class="sh"><div class="st">Дохід по категоріях</div></div>
       ${incCats.length===0?'<div style="color:var(--t3);font-size:13px">Немає даних</div>':
       incCats.map(([cat,amt])=>`<div style="margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px">${cbadge(cat)}<span class="fm ap">${s}${amt.toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">${cbadge(cat)}<span class="fm ap">${s}${nf(amt)}</span></div>
         <div class="pb2"><div class="pf" style="width:${(amt/maxInc*100).toFixed(1)}%;background:var(--ac)"></div></div>
       </div>`).join('')}
     </div>
@@ -1041,7 +1052,7 @@ function renderAnalytics(){
       <div class="sh"><div class="st">Витрати по категоріях</div></div>
       ${expCats.length===0?'<div style="color:var(--t3);font-size:13px">Немає даних</div>':
       expCats.map(([cat,amt])=>`<div style="margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px">${cbadge(cat)}<span class="fm an">${s}${Math.abs(amt).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">${cbadge(cat)}<span class="fm an">${s}${nf(Math.abs(amt))}</span></div>
         <div class="pb2"><div class="pf" style="width:${(Math.abs(amt)/maxExp*100).toFixed(1)}%;background:var(--rd)"></div></div>
       </div>`).join('')}
     </div>
@@ -1124,8 +1135,8 @@ function renderSiteExp(domain){
     <div class="exp-sum">
       <span style="color:var(--t3);font-size:13px">${filt.length} з ${allTx.length}</span><span style="color:var(--t3)">·</span>
       <span>Баланс: <strong>${bH(bal)}</strong></span>
-      <span style="color:var(--t3);font-size:12px">↑ <span style="color:var(--ac)">$${inc.toFixed(2)}</span></span>
-      ${exp<0?`<span style="color:var(--t3);font-size:12px">↓ <span style="color:var(--rd)">$${Math.abs(exp).toFixed(2)}</span></span>`:''}
+      <span style="color:var(--t3);font-size:12px">↑ <span style="color:var(--ac)">$${nf(inc)}</span></span>
+      ${exp<0?`<span style="color:var(--t3);font-size:12px">↓ <span style="color:var(--rd)">$${nf(Math.abs(exp))}</span></span>`:''}
     </div>
     ${(()=>{const selCount=filt.filter(t=>selExpTx.has(t.id)).length;return selCount>0?`<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--acd);border-bottom:1px solid var(--b2)"><span style="color:var(--ac);font-family:var(--fm);font-weight:600">${selCount}</span><span style="color:var(--t2);font-size:13px">вибрано</span><button class="btn bg bs" onclick="showBulkExpTx('team')">↔ Команду</button><button class="btn bg bs" onclick="showBulkExpTx('seo')">👤 SEO</button><button class="btn bg bs" style="margin-left:auto" onclick="selExpTx=new Set();renderSites()">Зняти</button></div>`:''})()}
     <table class="exp-tbl"><thead><tr>
@@ -1329,7 +1340,7 @@ function renderSeoSplitUI(){
       teamSelSeos.forEach(s=>{
         listHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-bottom:1px solid var(--b1);font-size:12px">
           <span style="color:var(--t1)">@${s.h} <span style="color:var(--t3)">(${tt})</span></span>
-          <span class="fm" style="color:var(--t2)">${getCurSym()}${Math.abs(perSeo).toFixed(2)}</span>
+          <span class="fm" style="color:var(--t2)">${getCurSym()}${nf(Math.abs(perSeo))}</span>
         </div>`;
       });
     });
@@ -1338,7 +1349,7 @@ function renderSeoSplitUI(){
     selSeos.forEach(s=>{
       listHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-bottom:1px solid var(--b1);font-size:12px">
         <span style="color:var(--t1)">@${s.h} <span style="color:var(--t3)">(${s.team})</span></span>
-        <span class="fm" style="color:var(--t2)">${getCurSym()}${Math.abs(perSeo).toFixed(2)}</span>
+        <span class="fm" style="color:var(--t2)">${getCurSym()}${nf(Math.abs(perSeo))}</span>
       </div>`;
     });
   }
@@ -1381,7 +1392,7 @@ function renderSeoSplitUI(){
       teamSelSeos.forEach(s=>{
         distHtml+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px 4px 20px;border-bottom:1px solid var(--b1);font-size:12px">
           <span style="color:var(--t1);font-family:var(--fm)">@${s.h}</span>
-          <span class="fm" style="color:var(--t2)">${getCurSym()}${Math.abs(perSeo).toFixed(2)}</span>
+          <span class="fm" style="color:var(--t2)">${getCurSym()}${nf(Math.abs(perSeo))}</span>
         </div>`;
       });
     });
@@ -1877,17 +1888,17 @@ function renderTx(){
     ${allCats.map(c=>`<button class="cat-btn ${txState.cat===c?'a':''} ${!avail.has(c)?'dis':''}" onclick="${avail.has(c)?`setTxState('cat','${esc(c)}')`:''}"">${c}</button>`).join('')}
   </div>
   <div style="margin-bottom:14px"><div class="cd" style="padding:10px 16px;display:inline-flex;gap:20px;align-items:center">
-    <span style="color:var(--t3);font-size:13px">Знайдено: <strong style="color:var(--t1)">${filtered.length.toLocaleString()}</strong></span>
+    <span style="color:var(--t3);font-size:13px">Знайдено: <strong style="color:var(--t1)">${nfi(filtered.length)}</strong></span>
     <span style="color:var(--t3);font-size:13px">Баланс: ${bH(bal)}</span>
-    <span style="color:var(--t3);font-size:12px">↑ <span style="color:var(--ac)">${getCurSym()}${inc.toFixed(2)}</span></span>
-    ${exp<0?`<span style="color:var(--t3);font-size:12px">↓ <span style="color:var(--rd)">${getCurSym()}${Math.abs(exp).toFixed(2)}</span></span>`:''}
+    <span style="color:var(--t3);font-size:12px">↑ <span style="color:var(--ac)">${getCurSym()}${nf(inc)}</span></span>
+    ${exp<0?`<span style="color:var(--t3);font-size:12px">↓ <span style="color:var(--rd)">${getCurSym()}${nf(Math.abs(exp))}</span></span>`:''}
   </div></div>
   <div class="cd" style="padding:0;overflow:hidden">
     <table><thead><tr><th>Дата</th><th>Сайт</th><th>Команда</th><th>SEO</th><th>Категорія</th><th>Тип</th><th>Коментар</th><th style="text-align:right">Сума</th><th></th></tr></thead>
     <tbody id="tx-tbody">${renderTxRows(shown)}</tbody></table>
     ${hasMore?`<div style="padding:14px;text-align:center;border-top:1px solid var(--b1)">
       <button class="btn bg" onclick="txLoadMore()">Завантажити ще (${filtered.length-txInfiniteCount} залишилось)</button>
-    </div>`:'<div style="padding:10px 14px;border-top:1px solid var(--b1);text-align:center;font-size:12px;color:var(--t3)">Показано всі ${filtered.length.toLocaleString()} записів</div>'}
+    </div>`:'<div style="padding:10px 14px;border-top:1px solid var(--b1);text-align:center;font-size:12px;color:var(--t3)">Показано всі ${nfi(filtered.length)} записів</div>'}
   </div>`;
   if(txState.period==='custom'){
     if(!txState.from){setTimeout(()=>{const el=document.getElementById('tx-from-cdp');if(el)el.click();},100);}
@@ -1933,7 +1944,7 @@ function renderImport(){
         </div>
         <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--b1)">
           <div class="sl" style="margin-bottom:6px">Поточна база</div>
-          <div style="font-size:13px;color:var(--t2)">${txCount.toLocaleString()} транзакцій · ${Object.keys(DB.sites||{}).length} сайтів · ${Object.keys(DB.seos||{}).length} SEO</div>
+          <div style="font-size:13px;color:var(--t2)">${nfi(txCount)} транзакцій · ${Object.keys(DB.sites||{}).length} сайтів · ${Object.keys(DB.seos||{}).length} SEO</div>
         </div>
       </div>
     </div>
@@ -1976,7 +1987,7 @@ async function hFile(file){
     await new Promise(r=>setTimeout(r,30));
     const wb=XLSX.read(buf,{type:'array',cellDates:true});
     const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:null});
-    st.innerHTML=`<div class="alrt ai">Обробляємо ${rows.length.toLocaleString()} рядків...</div>`;
+    st.innerHTML=`<div class="alrt ai">Обробляємо ${nfi(rows.length)} рядків...</div>`;
     await new Promise(r=>setTimeout(r,30));
     const parsed=importRows(rows);
     if(merge){
@@ -2001,7 +2012,7 @@ async function hFile(file){
     saveDB();ub();
     const tc=parsed.transactions.length,sc=Object.keys(parsed.sites).length,se=Object.keys(parsed.seos).length;
     const splitInfo=parsed.splitGroups?` · розгорнуто ${parsed.splitGroups} split-груп → ${parsed.splitTxs} транзакцій`:'';
-    st.innerHTML=`<div class="alrt as">✓ Імпортовано: ${tc.toLocaleString()} транзакцій · ${sc} сайтів · ${se} SEO${splitInfo}${merge?' (додано до існуючих)':''}</div>`;
+    st.innerHTML=`<div class="alrt as">✓ Імпортовано: ${nfi(tc)} транзакцій · ${sc} сайтів · ${se} SEO${splitInfo}${merge?' (додано до існуючих)':''}</div>`;
     setTimeout(()=>sv('dash'),2000);
   }catch(e){st.innerHTML=`<div class="alrt" style="background:var(--rdd);border:1px solid rgba(255,77,109,.2);color:var(--rd)">Помилка: ${e.message}</div>`;}
 }
