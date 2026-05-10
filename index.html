@@ -761,15 +761,7 @@ function nfi(v){return nf(v,0);}
 function bH(v){const s=getCurSym();return v>=0?`<span class="ap">${s}${nf(v)}</span>`:`<span class="an">-${s}${nf(Math.abs(v))}</span>`;}
 function aH(v){const s=getCurSym();return v>=0?`<span class="ap">+${s}${nf(v)}</span>`:`<span class="an">-${s}${nf(Math.abs(v))}</span>`;}
 function txAmtDisplay(t){
-  // Зберігаємо завжди в USD (для коректної агрегації балансу),
-  // але якщо оригінал був в EUR — показуємо в EUR (помножимо назад на rate),
-  // щоб користувач бачив суму як він її ввів.
-  if(t.origCur==='eur'){
-    const eurAmt=t.amount*getRate();
-    return eurAmt>=0
-      ?`<span class="ap">+€${nf(eurAmt)}</span>`
-      :`<span class="an">-€${nf(Math.abs(eurAmt))}</span>`;
-  }
+  // Завжди показуємо в $ (USD) — як зберігається в БД після конвертації.
   return aH(t.amount);
 }
 function pgr(total,page,fn,px){
