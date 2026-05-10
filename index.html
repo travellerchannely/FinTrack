@@ -1183,7 +1183,7 @@ function buildSiteDropdown(selectedSite){
   return`<div style="position:relative" id="site-dd-wrap">
     <input class="inp" id="et-site" placeholder="Пошук сайту..." value="${selectedSite||''}" autocomplete="off"
       oninput="filterSiteDd(this.value)" onfocus="filterSiteDd(this.value)" onblur="setTimeout(()=>hideSiteDd(),200)" style="width:100%">
-    <div id="site-dd-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s2);border:1px solid var(--b2);border-radius:7px;max-height:180px;overflow-y:auto;z-index:200;margin-top:2px"></div>
+    <div id="site-dd-list" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--s2);border:1px solid var(--b2);border-radius:7px;max-height:340px;overflow-y:auto;z-index:200;margin-top:2px"></div>
   </div>`;
 }
 function filterSiteDd(q){
@@ -1191,7 +1191,10 @@ function filterSiteDd(q){
   const allSites=['Без Сайту',...Object.keys(DB.sites).sort()];
   const matches=q?allSites.filter(s=>s.toLowerCase().includes(q.toLowerCase())):allSites;
   list.style.display=matches.length?'block':'none';
-  list.innerHTML=matches.slice(0,30).map(s=>`<div onclick="pickSite('${esc(s)}')" style="padding:8px 12px;cursor:pointer;font-size:13px;font-family:var(--fm);color:var(--t1)" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''">${s}</div>`).join('');
+  const LIMIT=200;
+  const shown=matches.slice(0,LIMIT);
+  const more=matches.length-shown.length;
+  list.innerHTML=shown.map(s=>`<div onclick="pickSite('${esc(s)}')" style="padding:8px 12px;cursor:pointer;font-size:13px;font-family:var(--fm);color:var(--t1)" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background=''">${escHtml(s)}</div>`).join('') + (more>0?`<div style="padding:8px 12px;font-size:12px;color:var(--t3);text-align:center;border-top:1px solid var(--b1);font-family:var(--fm)">… ще ${nfi(more)} — уточніть запит</div>`:'');
 }
 function hideSiteDd(){const l=document.getElementById('site-dd-list');if(l)l.style.display='none';}
 function pickSite(s){
