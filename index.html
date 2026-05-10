@@ -258,11 +258,14 @@ function _mapFinmapRow(row, idForTx){
   const amt=parseFloat(row['Сума в валюті компанії'])||0;
   const cat=row['Категорія']||null;
   // знак: за напрямом рахунку; якщо обидва порожні — за категорією
-  const incomeCats=['CPA','RevShare','Bonus','Hybrid','Flat','Категорії доходу'];
+  // Sign: за напрямом рахунку. Якщо рахунків нема (системні транзакції типу
+  // зарплат, бонусів співробітників, дивідендів) — Finmap трактує як ВИТРАТИ
+  // незалежно від категорії. Це гарантує, що "Загальний баланс" у нас збігається
+  // з "Всього на рахунках" Finmap.
   let sign;
   if(isIncome) sign=+1;
   else if(isExpense) sign=-1;
-  else sign=incomeCats.includes(cat)?+1:-1;
+  else sign=-1;
   const amount=sign*Math.abs(amt);
   const date=parseFmDate(row['Дата платежу'])||parseFmDate(row['Дата нарахування']);
   if(!date||!amt) return null;
