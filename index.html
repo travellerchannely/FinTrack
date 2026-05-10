@@ -356,6 +356,9 @@ function importRows(rows){
     if(tx.seo && !seos[tx.seo]) seos[tx.seo]={name:tx.seoName||tx.seo,team:tx.team||null};
   }
 
+  // splitGroup IDs: continue numbering from existing DB to avoid collisions
+  let nextSplitGroup = 1 + (DB.transactions||[]).reduce((m,t)=>Math.max(m, t.splitGroup||0), 0);
+
   for(const g of groups){
     const parentTx=applyCanon(_mapFinmapRow(g.parent, txs.length));
     if(g.splits.length===0){
@@ -365,9 +368,11 @@ function importRows(rows){
       }
       continue;
     }
-    // Маємо splits: parent розгортаємо у N окремих транзакцій
+    // Маємо splits: parent розгортаємо у N окремих транзакцій з СПІЛЬНИМ splitGroup ID,
+    // щоб у UI вони згрупувались під один rowParent.
     if(!parentTx) continue; // parent без дати/суми — пропускаємо групу повністю
     splitGroups++;
+    const sg = nextSplitGroup++;
     // знак успадковуємо від parent
     const sign = parentTx.amount<0 ? -1 : (parentTx.amount>0 ? +1 : 1);
     for(const s of g.splits){
@@ -380,8 +385,9 @@ function importRows(rows){
         team:splitTeam,
         amount:sign*splitAmt,
         amtAccount:splitAmt,
-        comment:(parentTx.comment?parentTx.comment+' · ':'')+'split→'+splitTeam,
-        splitOf:parentTx.date+'|'+parentTx.amount+'|'+(parentTx.site||'')+'|'+(parentTx.comment||'')
+        // Зберігаємо оригінальний parent.comment без додавання суфіксу —
+        // у UI вони відображаються як єдина група, кожна частина має свою команду
+        splitGroup: sg
       };
       txs.push(tx);
       collect(tx, tx.amount<0);
@@ -501,27 +507,77 @@ function getCurSym(){return DB.currency==='eur'?'€':'$';}
 function getRate(){return parseFloat(DB.eurRate)||1;}
 
 // ── Server API client ──────────────────────────────────────
+function _emptyDB(){return{sites:{},seos:{},transactions:[],users:[],teams:['Fortuna','Phoenix','Baza','Brand','Review'],catIncome:['Hybrid','RevShare','CPA','Flat','Bonus'],catExpense:['Domain','Links','Host','Content','Services','Other']};}
+
 async function api(path, opts={}){
   const res=await fetch(path,{credentials:'include',headers:{'Content-Type':'application/json'},...opts,body:opts.body?JSON.stringify(opts.body):undefined});
-  if(res.status===401){currentUser=null;DB={sites:{},seos:{},transactions:[],users:[]};render();updateUserSection();throw new Error('unauthenticated');}
+  if(res.status===401){
+    currentUser=null;
+    DB=_emptyDB();
+    render();updateUserSection();
+    throw new Error('unauthenticated');
+  }
   const data=await res.json().catch(()=>({}));
   if(!res.ok)throw new Error(data.error||'Помилка запиту');
   return data;
 }
 
-// debounce save to /api/db (admin only). Saved within 500ms after last call.
-let _saveTimer=null,_savePending=false;
-function saveDB(){
-  // Skip if not admin or not initialized
-  if(!currentUser||currentUser.role!=='admin')return;
-  _savePending=true;
-  if(_saveTimer)clearTimeout(_saveTimer);
-  _saveTimer=setTimeout(async()=>{
-    _saveTimer=null;
-    try{await api('/api/db',{method:'PUT',body:DB});}catch(e){console.warn('saveDB failed:',e.message);}
-    _savePending=false;
-  },500);
+// Toast/banner для повідомлень про збереження
+function showToast(msg,kind){
+  let el=document.getElementById('save-toast');
+  if(!el){
+    el=document.createElement('div');
+    el.id='save-toast';
+    el.style.cssText='position:fixed;bottom:20px;right:20px;padding:12px 18px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 6px 20px rgba(0,0,0,0.4);max-width:340px';
+    document.body.appendChild(el);
+  }
+  if(kind==='error'){el.style.background='var(--rdd)';el.style.border='1px solid rgba(255,77,109,.4)';el.style.color='var(--rd)';}
+  else if(kind==='warning'){el.style.background='rgba(245,158,11,0.1)';el.style.border='1px solid rgba(245,158,11,.4)';el.style.color='#f59e0b';}
+  else{el.style.background='var(--acd)';el.style.border='1px solid var(--acd2)';el.style.color='var(--ac)';}
+  el.textContent=msg;el.style.display='block';
+  clearTimeout(showToast._t);
+  showToast._t=setTimeout(()=>{el.style.display='none';},4000);
 }
+
+// Debounced save to /api/db (admin only). Заплановані зміни flush'аться:
+//  - через 500ms після останньої зміни (debounce)
+//  - на logout (через flushSaveDB)
+//  - на window.beforeunload (best effort)
+let _saveTimer=null,_savePromise=null,_dirty=false;
+function saveDB(){
+  if(!currentUser||currentUser.role!=='admin')return;
+  _dirty=true;
+  if(_saveTimer)clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>{flushSaveDB();},500);
+}
+async function flushSaveDB(){
+  if(!_dirty||!currentUser||currentUser.role!=='admin')return;
+  if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}
+  _dirty=false;
+  // Серіалізуємо: якщо вже йде попередній save — чекаємо
+  const prev=_savePromise||Promise.resolve();
+  _savePromise=prev.then(async()=>{
+    const snapshot=DB; // PUT надсилає весь DB; зміни після цього потраплять у наступний save
+    try{
+      await api('/api/db',{method:'PUT',body:snapshot});
+    }catch(e){
+      console.warn('saveDB failed:',e.message);
+      _dirty=true; // спробуємо знову
+      showToast('Не вдалося зберегти: '+e.message+'. Дані залишаються лише локально.','error');
+      // Auto-retry через 5s
+      setTimeout(()=>{if(_dirty)flushSaveDB();},5000);
+    }
+  });
+  return _savePromise;
+}
+window.addEventListener('beforeunload',(ev)=>{
+  if(_dirty&&currentUser&&currentUser.role==='admin'){
+    // Найкраще зусилля: показуємо нативний confirm. SendBeacon без cookies — менш надійний.
+    ev.preventDefault();
+    ev.returnValue='Є незбережені зміни. Дочекайтеся збереження або підтвердіть закриття.';
+    return ev.returnValue;
+  }
+});
 
 async function loadDBFromServer(){
   const data=await api('/api/db');
@@ -539,18 +595,21 @@ function applyUserFilter(data){
   const activeUser=getActiveUser();
   if(!activeUser||activeUser.role==='admin')return data;
 
-  const filtered=data.filter(item=>{
-    // Filter by teams
-    if(activeUser.teams&&activeUser.teams.length>0&&!activeUser.teams.includes(item.team))return false;
-    // Filter by categories (for transactions)
-    if(activeUser.categories&&activeUser.categories.length>0&&item.category&&!activeUser.categories.includes(item.category))return false;
-    // Filter by seos
-    if(activeUser.seos&&activeUser.seos.length>0&&item.seo&&!activeUser.seos.includes(item.seo))return false;
-    // Filter by sites
-    if(activeUser.sites&&activeUser.sites.length>0&&item.site&&!activeUser.sites.includes(item.site))return false;
+  // Case-insensitive порівняння: користувач у permissions може мати "fortuna",
+  // а у транзакціях зберігається "Fortuna" (або навпаки) — все одно повинно матчитись.
+  const ci = arr => new Set((arr||[]).map(x => String(x||'').toLowerCase()));
+  const teams = ci(activeUser.teams);
+  const cats = ci(activeUser.categories);
+  const seos = ci(activeUser.seos);
+  const sites = ci(activeUser.sites);
+
+  return data.filter(item=>{
+    if(teams.size>0 && !teams.has(String(item.team||'').toLowerCase()))return false;
+    if(cats.size>0 && item.category && !cats.has(String(item.category).toLowerCase()))return false;
+    if(seos.size>0 && item.seo && !seos.has(String(item.seo).toLowerCase()))return false;
+    if(sites.size>0 && item.site && !sites.has(String(item.site).toLowerCase()))return false;
     return true;
   });
-  return filtered;
 }
 
 function canAddTransactions(){
@@ -573,11 +632,27 @@ function canAccessImport(){
   const u=getActiveUser();
   return!u||u.role==='admin'||u.canImport;
 }
+// Settings / Sites / Users — admin only.
+// Звичайний user не повинен бачити ці екрани (там CRUD команд, SEO, юзерів).
+function canAccessSettings(){
+  const u=getActiveUser();
+  return!!u && u.role==='admin';
+}
+function canManageSites(){
+  const u=getActiveUser();
+  return!!u && u.role==='admin';
+}
+function canManageUsers(){
+  const u=getActiveUser();
+  return!!u && u.role==='admin';
+}
 
 async function logout(){
+  // Спершу дочекаємось pending збережень — інакше остання зміна загубиться
+  try{await flushSaveDB();}catch{}
   try{await api('/api/logout',{method:'POST'});}catch{}
   currentUser=null;demoUser=null;
-  DB={sites:{},seos:{},transactions:[],users:[],teams:['Fortuna','Phoenix','Baza','Brand','Review']};
+  DB=_emptyDB();
   updateUserSection();
   render();
 }
@@ -649,12 +724,12 @@ function ub(){
 function tbadge(t){
   if(!t)return'<span style="color:var(--t3)">—</span>';
   const teams=getTeams();
-  if(!teams.includes(t))return`<span style="color:var(--t3)" title="Команда видалена">${t} ✕</span>`;
+  if(!teams.includes(t))return`<span style="color:var(--t3)" title="Команда видалена">${escHtml(t)} ✕</span>`;
   const tc={Fortuna:'tF',Phoenix:'tP',Baza:'tB',Brand:'tBr',Review:'tR'};
   const cls=tc[t]||'';
-  return`<span class="bt ${cls}">${t}</span>`;
+  return`<span class="bt ${cls}">${escHtml(t)}</span>`;
 }
-function cbadge(c){return c?`<span class="bc">${c}</span>`:'—';}
+function cbadge(c){return c?`<span class="bc">${escHtml(c)}</span>`:'—';}
 function chk(ch,fn){return`<div class="cb ${ch?'c':''}" onclick="${fn}">${ch?'✓':''}</div>`;}
 function bH(v){const s=getCurSym();return v>=0?`<span class="ap">${s}${v.toFixed(2)}</span>`:`<span class="an">-${s}${Math.abs(v).toFixed(2)}</span>`;}
 function aH(v){const s=getCurSym();return v>=0?`<span class="ap">+${s}${v.toFixed(2)}</span>`:`<span class="an">-${s}${Math.abs(v).toFixed(2)}</span>`;}
@@ -668,7 +743,12 @@ function pgr(total,page,fn,px){
   for(let i=Math.max(1,page-2);i<=Math.min(tp,page+2);i++)pages.push(i);
   return`<div class="pb"><button class="pbt" onclick="${fn}(1)">«</button><button class="pbt" onclick="${fn}(Math.max(1,${px}Page-1))">‹</button>${pages.map(p=>`<button class="pbt ${p===page?'a':''}" onclick="${fn}(${p})">${p}</button>`).join('')}<button class="pbt" onclick="${fn}(Math.min(${tp},${px}Page+1))">›</button><button class="pbt" onclick="${fn}(${tp})">»</button><span class="pi">${total.toLocaleString()} записів</span></div>`;
 }
-function esc(s){return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+// HTML-context escape: для тексту, який вставляється в innerHTML
+function escHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+// Attribute-context escape: для атрибутів і onclick='...' single-quoted рядків
+function escAttr(s){return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+// Backward-compat alias (старий esc)
+function esc(s){return escAttr(s);}
 
 // ── DASHBOARD ──
 function renderDash(){
@@ -695,7 +775,7 @@ function renderDash(){
     <div class="sc"><div class="sl">Загальний баланс</div><div class="sv" style="font-size:22px">${bH(totalBal)}</div></div>
     <div class="sc"><div class="sl">SEO-спеціалістів</div><div class="sv">${Object.keys(seos).length}</div></div>
     <div class="sc"><div class="sl">Команд</div><div class="sv">${TEAMS.length}</div></div>
-    <div class="sc"><div class="sl">Користувачів</div><div class="sv">${Object.keys(seos).length}</div></div>
+    <div class="sc"><div class="sl">Користувачів</div><div class="sv">${(DB.users||[]).length}</div></div>
   </div>
   <div class="tc2" style="margin-bottom:20px">
     <div class="cd">
@@ -721,7 +801,7 @@ function renderDash(){
     <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--b1)"><div class="st" style="color:var(--rd)">🗑 Останні видалені</div><span style="font-size:12px;color:var(--t3)">${deleted.length} всього</span></div>
     ${deleted.length===0?'<div style="color:var(--t3);text-align:center;padding:20px">Немає видалених</div>':
     `<table><thead><tr><th>Дата</th><th>Сайт</th><th>Команда</th><th>Категорія</th><th style="text-align:right">Сума</th></tr></thead>
-    <tbody>${deleted.slice(0,15).map(t=>`<tr class="del-row"><td class="fm" style="font-size:12px">${t.date}</td><td style="font-size:13px;font-family:var(--fm)">${t.site||'Видалений сайт'}</td><td>${tbadge(t.team)}</td><td>${cbadge(t.category)}</td><td style="text-align:right">${aH(t.amount)}</td></tr>`).join('')}</tbody></table>`}
+    <tbody>${deleted.slice(0,15).map(t=>`<tr class="del-row"><td class="fm" style="font-size:12px">${escHtml(t.date)}</td><td style="font-size:13px;font-family:var(--fm)">${t.site?escHtml(t.site):'Видалений сайт'}</td><td>${tbadge(t.team)}</td><td>${cbadge(t.category)}</td><td style="text-align:right">${aH(t.amount)}</td></tr>`).join('')}</tbody></table>`}
   </div>`;
 }
 
@@ -1048,8 +1128,8 @@ function renderSiteExp(domain){
       <td class="fm" style="color:var(--t3);white-space:nowrap">${t.date||'—'}</td>
       <td>${tbadge(t.team)}</td>
       <td>${t.amount>=0?'<span class="ti">Дохід</span>':'<span class="to">Витрата</span>'}</td>
-      <td>${cbadge(t.category)}</td><td style="color:var(--t2)">${t.seoName||t.seo||'—'}</td>
-      <td style="color:var(--t3);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.comment||'—'}</td>
+      <td>${cbadge(t.category)}</td><td style="color:var(--t2)">${escHtml(t.seoName||t.seo||'—')}</td>
+      <td style="color:var(--t3);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.comment||'—')}</td>
       <td style="text-align:right">${txAmtDisplay(t)}</td>
       <td><div style="display:flex;gap:4px"><button class="btn bg bs" onclick="showEditTx(${t.id})" style="padding:3px 7px;font-size:11px">✎</button><button class="btn brd bs" onclick="confirmDeleteTx(${t.id})" style="padding:3px 7px;font-size:11px">🗑</button></div></td>
     </tr>`).join('')}
@@ -1483,7 +1563,10 @@ function addTxSave(txType){
   const isIncome=txType==='income';
   const isExpense=txType==='expense';
   const amtRaw=parseFloat(document.getElementById('et-amt').value);
-  const site=document.getElementById('et-site').value.trim();
+  let site=document.getElementById('et-site').value.trim();
+  const siteSelected=!!site; // користувач щось ввів/вибрав з dropdown
+  // "Без Сайту" — не реальний сайт, а placeholder. Зберігаємо як null/empty.
+  if(site==='Без Сайту')site='';
   const cat=document.getElementById('et-cat').value;
   const seo=document.getElementById('et-seo').value;
   const date=document.getElementById('et-date').value;
@@ -1491,7 +1574,7 @@ function addTxSave(txType){
   const errs=[];
   if(!date) errs.push('Дата');
   if(isNaN(amtRaw)||amtRaw===0) errs.push('Сума');
-  if(!site) errs.push('Сайт');
+  if(!siteSelected) errs.push('Сайт');
   if(!cat) errs.push('Категорія');
   if(txSeoSplit.enabled){
     const selSeoCount=Object.values(txSeoSplit.seos).filter(Boolean).length;
@@ -1582,7 +1665,7 @@ function renderSites(){
       <td onclick="event.stopPropagation()">${chk(selSites.has(d),`event.stopPropagation();toggleSite('${d}')`)}</td>
       <td><span class="chevron ${isExp?'open':''}">▶</span><span class="fm" style="font-size:13px;color:var(--t1);font-weight:500">${d}</span></td>
       <td>${tbadge(i.team)}</td>
-      <td>${i.seo?`<div style="font-size:13px;color:var(--t1)">${i.seoName||i.seo}</div><div style="font-size:11px;color:var(--t3);font-family:var(--fm)">@${i.seo}</div>`:'<span style="color:var(--t3)">—</span>'}</td>
+      <td>${i.seo?`<div style="font-size:13px;color:var(--t1)">${escHtml(i.seoName||i.seo)}</div><div style="font-size:11px;color:var(--t3);font-family:var(--fm)">@${escHtml(i.seo)}</div>`:'<span style="color:var(--t3)">—</span>'}</td>
       <td><span class="fm" style="font-size:12px;color:var(--t3)">${info.cnt} транз.</span></td>
       <td style="text-align:right">${bH(info.bal)}</td>
       <td><div style="display:flex;gap:4px"><button class="btn bg bs" onclick="event.stopPropagation();showEditSite('${d}')" style="padding:3px 8px;font-size:11px">✎</button><button class="btn brd bs" onclick="event.stopPropagation();deleteSite('${d}')" style="padding:3px 7px;font-size:11px">🗑</button></div></td>
@@ -1591,7 +1674,7 @@ function renderSites(){
   }
   document.getElementById('content').innerHTML=`
   <div class="fi">
-    <input class="inp" placeholder="Пошук домену..." id="site-search-inp" value="${siteFilt.search}" oninput="siteFilt.search=this.value;sitePage=1;renderSitesKeepFocus()" style="width:220px">
+    <input class="inp" placeholder="Пошук домену..." id="site-search-inp" value="${escHtml(siteFilt.search)}" oninput="siteFilt.search=this.value;sitePage=1;renderSitesKeepFocus()" style="width:220px">
     <select class="inp" onchange="siteFilt.team=this.value;sitePage=1;renderSites()"><option value="">Всі команди</option>${teams.map(t=>`<option ${siteFilt.team===t?'selected':''} value="${t}">${t}</option>`).join('')}</select>
     <select class="inp" onchange="siteFilt.seo=this.value;sitePage=1;renderSites()"><option value="">Всі SEO</option>${Object.entries(seos).map(([h,s])=>`<option ${siteFilt.seo===h?'selected':''} value="${h}">@${h} — ${s.name}</option>`).join('')}</select>
     <div style="margin-left:auto"><button class="btn bp bs" onclick="showAddSite()">+ Додати сайт</button></div>
@@ -1697,18 +1780,20 @@ function setTxState(key,val){
 let expandedSplitGroups=new Set();
 function toggleSplitGroup(sg){expandedSplitGroups.has(sg)?expandedSplitGroups.delete(sg):expandedSplitGroups.add(sg);renderTx();}
 function renderTxRow(t){
+  const showEdit=canEditTransactions();
+  const showDel=canDeleteTransactions();
   return`<tr>
-      <td class="fm" style="color:var(--t3);font-size:12px;white-space:nowrap">${t.date||'—'}</td>
-      <td style="font-family:var(--fm);font-size:12px;color:var(--t1);font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.site||'Без Сайту'}</td>
+      <td class="fm" style="color:var(--t3);font-size:12px;white-space:nowrap">${escHtml(t.date||'—')}</td>
+      <td style="font-family:var(--fm);font-size:12px;color:var(--t1);font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.site?escHtml(t.site):'Без Сайту'}</td>
       <td>${tbadge(t.team)}</td>
-      <td style="font-size:12px;color:var(--t2)">${t.seo?'@'+t.seo:'—'}</td>
+      <td style="font-size:12px;color:var(--t2)">${t.seo?'@'+escHtml(t.seo):'—'}</td>
       <td>${cbadge(t.category)}</td>
       <td>${t.amount>=0?'<span class="ti">Дохід</span>':'<span class="to">Витрата</span>'}</td>
-      <td style="font-size:12px;color:var(--t3);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.comment||'—'}</td>
+      <td style="font-size:12px;color:var(--t3);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.comment||'—')}</td>
       <td style="text-align:right">${txAmtDisplay(t)}</td>
       <td><div style="display:flex;gap:4px">
-        <button class="btn bg bs" onclick="showEditTx(${t.id})" style="padding:3px 7px;font-size:11px">✎</button>
-        <button class="btn brd bs" onclick="confirmDeleteTx(${t.id})" style="padding:3px 7px;font-size:11px">🗑</button>
+        ${showEdit?`<button class="btn bg bs" onclick="showEditTx(${t.id})" style="padding:3px 7px;font-size:11px">✎</button>`:''}
+        ${showDel?`<button class="btn brd bs" onclick="confirmDeleteTx(${t.id})" style="padding:3px 7px;font-size:11px">🗑</button>`:''}
       </div></td>
     </tr>`;
 }
@@ -1722,23 +1807,25 @@ function renderTxRows(txs){
       const totalAmt=group.reduce((s,x)=>s+x.amount,0);
       const teams=[...new Set(group.map(x=>x.team))];
       const isExp=expandedSplitGroups.has(t.splitGroup);
+      const showEdit=canEditTransactions();
+      const showDel=canDeleteTransactions();
       html+=`<tr class="sr ${isExp?'exp':''}" onclick="toggleSplitGroup(${t.splitGroup})" style="cursor:pointer">
-        <td class="fm" style="color:var(--t3);font-size:12px;white-space:nowrap"><span class="chevron ${isExp?'open':''}">▶</span>${t.date||'—'}</td>
-        <td style="font-family:var(--fm);font-size:12px;color:var(--t1);font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.site||'Без Сайту'}</td>
+        <td class="fm" style="color:var(--t3);font-size:12px;white-space:nowrap"><span class="chevron ${isExp?'open':''}">▶</span>${escHtml(t.date||'—')}</td>
+        <td style="font-family:var(--fm);font-size:12px;color:var(--t1);font-weight:500;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.site?escHtml(t.site):'Без Сайту'}</td>
         <td>${teams.map(tt=>tbadge(tt)).join(' ')}</td>
         <td style="font-size:12px;color:var(--t2)">Розподілено</td>
         <td>${cbadge(t.category)}</td>
         <td>${totalAmt>=0?'<span class="ti">Дохід</span>':'<span class="to">Витрата</span>'}</td>
-        <td style="font-size:12px;color:var(--t3);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.comment||'—'}</td>
+        <td style="font-size:12px;color:var(--t3);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.comment||'—')}</td>
         <td style="text-align:right">${aH(totalAmt)}</td>
         <td><div style="display:flex;gap:4px" onclick="event.stopPropagation()">
-          <button class="btn bg bs" onclick="showEditTx(${t.id})" style="padding:3px 7px;font-size:11px">✎</button>
-          <button class="btn brd bs" onclick="confirmDeleteTx(${t.id})" style="padding:3px 7px;font-size:11px">🗑</button>
+          ${showEdit?`<button class="btn bg bs" onclick="showEditTx(${t.id})" style="padding:3px 7px;font-size:11px">✎</button>`:''}
+          ${showDel?`<button class="btn brd bs" onclick="confirmDeleteTx(${t.id})" style="padding:3px 7px;font-size:11px">🗑</button>`:''}
         </div></td>
       </tr>`;
       if(isExp){
         html+=`<tr><td colspan="9" style="padding:0;background:#0c0f14"><table class="exp-tbl" style="width:100%">
-          ${group.map(g=>`<tr><td style="padding-left:32px">${tbadge(g.team)}</td><td style="font-size:12px;color:var(--t2)">${g.seo?'@'+g.seo:'—'}</td><td style="text-align:right">${aH(g.amount)}</td></tr>`).join('')}
+          ${group.map(g=>`<tr><td style="padding-left:32px">${tbadge(g.team)}</td><td style="font-size:12px;color:var(--t2)">${g.seo?'@'+escHtml(g.seo):'—'}</td><td style="text-align:right">${aH(g.amount)}</td></tr>`).join('')}
         </table></td></tr>`;
       }
     } else {
@@ -1870,9 +1957,15 @@ async function hFile(file){
       setTimeout(()=>sv('dash'),1500);return;
     }
     if(!window.XLSX)throw new Error('XLSX ще завантажується...');
+    st.innerHTML='<div class="alrt ai">Читаємо .xlsx (це може зайняти кілька секунд)...</div>';
+    await new Promise(r=>setTimeout(r,30));
     const buf=await file.arrayBuffer();
+    st.innerHTML='<div class="alrt ai">Парсимо .xlsx...</div>';
+    await new Promise(r=>setTimeout(r,30));
     const wb=XLSX.read(buf,{type:'array',cellDates:true});
     const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:null});
+    st.innerHTML=`<div class="alrt ai">Обробляємо ${rows.length.toLocaleString()} рядків...</div>`;
+    await new Promise(r=>setTimeout(r,30));
     const parsed=importRows(rows);
     if(merge){
       const maxId=DB.transactions.length?Math.max(...DB.transactions.map(x=>x.id)):0;
@@ -1931,9 +2024,13 @@ function render(){
   // Hide nav items based on permissions
   const navAn=document.getElementById('nav-analytics');if(navAn)navAn.style.display=canAccessAnalytics()?'':'none';
   const navIm=document.getElementById('nav-import');if(navIm)navIm.style.display=canAccessImport()?'':'none';
+  const navSet=document.getElementById('nav-settings');if(navSet)navSet.style.display=canAccessSettings()?'':'none';
+  const navSites=document.getElementById('nav-sites');if(navSites)navSites.style.display=canManageSites()?'':'none';
   // Redirect if no access
   if(VIEW==='analytics'&&!canAccessAnalytics())VIEW='dash';
   if(VIEW==='import'&&!canAccessImport())VIEW='dash';
+  if(VIEW==='settings'&&!canAccessSettings())VIEW='dash';
+  if(VIEW==='sites'&&!canManageSites())VIEW='dash';
   if(VIEW==='dash')renderDash();else if(VIEW==='sites')renderSites();else if(VIEW==='tx')renderTx();else if(VIEW==='analytics')renderAnalytics();else if(VIEW==='settings')renderSettings();else if(VIEW==='import')renderImport();
   if(demohtml){
     contentDiv.innerHTML=demohtml+contentDiv.innerHTML;
@@ -1969,7 +2066,7 @@ function renderSeoPanel(container){
     detailHtml=`<div class="cd" style="overflow-y:auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
         <div>
-          <div style="font-size:17px;font-weight:600;font-family:var(--fm)">@${selS.h}</div>
+          <div style="font-size:17px;font-weight:600;font-family:var(--fm)">@${escHtml(selS.h)}</div>
           <div style="color:var(--t3);font-size:13px;margin-top:2px">${tbadge(selS.team)}</div>
         </div>
         <div style="display:flex;gap:6px;align-items:center">
@@ -1981,7 +2078,7 @@ function renderSeoPanel(container){
         </div>
       </div>
       ${isEditing?`<div class="cd" style="background:var(--s2);margin-bottom:16px">
-        <div class="fr"><div class="fl">Нік</div><input class="inp" id="seo-handle" value="${selS.h}" style="width:100%" oninput="seoEditState.dirty=true"></div>
+        <div class="fr"><div class="fl">Нік</div><input class="inp" id="seo-handle" value="${escHtml(selS.h)}" style="width:100%" oninput="seoEditState.dirty=true"></div>
         <div class="fr"><div class="fl">Команда <span style="color:var(--rd)">*</span></div><select class="inp" id="seo-team" style="width:100%" onchange="seoEditState.dirty=true"><option value="">— Виберіть —</option>${teams.map(t=>`<option ${selS.team===t?'selected':''} value="${t}">${t}</option>`).join('')}</select></div>
       </div>`:''}
       <div class="sc" style="margin:0 0 14px"><div class="sl">Сайтів</div><div class="sv">${selS.sc}</div></div>
@@ -2092,14 +2189,14 @@ function renderSettings(){
     const permSummary=u.role==='admin'?'Адміністратор':
       `${u.teams?.length?u.teams.length+' команд':u.teams?.length===0?'Усі команди':''}${u.categories?.length?' · '+u.categories.length+' кат':''}`;
     return`<tr>
-      <td style="font-size:13px;font-family:var(--fm)">${u.email}</td>
-      <td style="font-size:13px;color:var(--t1);font-weight:500">${u.name}</td>
+      <td style="font-size:13px;font-family:var(--fm)">${escHtml(u.email)}</td>
+      <td style="font-size:13px;color:var(--t1);font-weight:500">${escHtml(u.name)}</td>
       <td><span class="bc">${u.role==='admin'?'Admin':'Custom'}</span></td>
       <td style="font-size:12px;color:var(--t2)">${permSummary}</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn bg bs" onclick="showEditUser(${u.id})" style="padding:3px 7px;font-size:11px">✎</button>
         <button class="btn bg bs" onclick="startDemo(${u.id})" style="padding:3px 7px;font-size:11px" title="Переглянути як цей користувач">👁</button>
-        <button class="btn brd bs" onclick="deleteUser(${u.id})" style="padding:3px 7px;font-size:11px" ${u.id===1?'disabled style="opacity:0.5;cursor:not-allowed"':''}}>🗑</button>
+        ${u.id===currentUser.id?'':`<button class="btn brd bs" onclick="deleteUser(${u.id})" style="padding:3px 7px;font-size:11px" title="Видалити користувача">🗑</button>`}
       </div></td>
     </tr>`;
   }).join('');
@@ -2166,6 +2263,9 @@ function editCat(key,idx){
 function saveCat(key,idx){
   if(!DB[key])DB[key]=[];
   const val=document.getElementById('cat-inp').value.trim();if(!val)return;
+  // case-insensitive дублі
+  const dup=DB[key].some((c,i)=>i!==idx && String(c).toLowerCase()===val.toLowerCase());
+  if(dup){alert('Категорія з такою назвою вже існує (без урахування регістру)');return;}
   if(idx===-1)DB[key].push(val);else DB[key][idx]=val;
   saveDB();closeModal();renderSettings();
 }
@@ -2192,6 +2292,9 @@ function editTeam(idx){
 function saveTeam(idx){
   if(!DB.teams)DB.teams=[];
   const val=document.getElementById('team-inp').value.trim();if(!val)return;
+  // case-insensitive дублі
+  const dup=DB.teams.some((t,i)=>i!==idx && String(t).toLowerCase()===val.toLowerCase());
+  if(dup){alert('Команда з такою назвою вже існує (без урахування регістру)');return;}
   if(idx===-1)DB.teams.push(val);else DB.teams[idx]=val;
   saveDB();closeModal();renderSettings();
 }
@@ -2311,7 +2414,7 @@ function showAddUser(){
 function showEditUser(userId){
   const user=DB.users.find(u=>u.id===userId);if(!user)return;
   showModal(`<div class="md" style="max-width:600px;max-height:85vh" onclick="event.stopPropagation()"><div class="mdt">Редагувати користувача</div>
-    <div class="fr"><div class="fl">Email</div><input class="inp" id="user-email" value="${user.email}" style="width:100%" disabled></div>
+    <div class="fr"><div class="fl">Email</div><input class="inp" id="user-email" value="${escHtml(user.email)}" style="width:100%" disabled></div>
     <div class="fr"><div class="fl">Пароль (залиш порожнім, щоб не змінювати)</div><input class="inp" type="password" id="user-pass" placeholder="••••••••" style="width:100%"></div>
     <div class="fr"><div class="fl">Ім'я</div><input class="inp" id="user-name" value="${user.name}" style="width:100%"></div>
     ${user.id!==1?`<div class="fr"><div class="fl">Роль</div><select class="inp" id="user-role" onchange="document.getElementById('user-perms').style.display=this.value==='custom'?'block':'none'" style="width:100%">
@@ -2398,8 +2501,7 @@ async function deleteUser(userId){
   }catch(e){alert('Помилка: '+e.message);}
 }
 
-function showModal(html){document.getElementById('modal-root').innerHTML=`<div class="mo" onclick="closeModal()">${html}</div>`;}
-function closeModal(){document.getElementById('modal-root').innerHTML='';}
+// (showModal/closeModal вже визначені вище — дублікат прибрано)
 
 // ── CUSTOM DATEPICKER ──
 const MONTHS_UA=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
@@ -2467,8 +2569,8 @@ function updateUserSection(){
     userSec.innerHTML=`
       <div style="padding:8px 0;color:var(--t3);font-size:11px;letter-spacing:1px;text-transform:uppercase">Користувач</div>
       <div style="padding:8px 12px;margin-bottom:8px;background:var(--s2);border-radius:7px;border:1px solid var(--b1)">
-        <div style="font-size:13px;color:var(--t1);font-weight:500">${currentUser.name}</div>
-        <div style="font-size:11px;color:var(--t3);font-family:var(--fm)">${currentUser.email}</div>
+        <div style="font-size:13px;color:var(--t1);font-weight:500">${escHtml(currentUser.name)}</div>
+        <div style="font-size:11px;color:var(--t3);font-family:var(--fm)">${escHtml(currentUser.email)}</div>
       </div>
       <button class="btn bg bs" style="width:100%;font-size:12px" onclick="logout()">🚪 Вихід</button>
     `;
