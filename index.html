@@ -2595,18 +2595,16 @@ function cdpTrigger(id,label,val,onPickFn){
 function updateUserSection(){
   const userSec=document.getElementById('user-section');
   if(!userSec)return;
-  if(currentUser&&currentUser.role!=='admin'){
-    userSec.innerHTML=`
-      <div style="padding:8px 0;color:var(--t3);font-size:11px;letter-spacing:1px;text-transform:uppercase">Користувач</div>
-      <div style="padding:8px 12px;margin-bottom:8px;background:var(--s2);border-radius:7px;border:1px solid var(--b1)">
-        <div style="font-size:13px;color:var(--t1);font-weight:500">${escHtml(currentUser.name)}</div>
-        <div style="font-size:11px;color:var(--t3);font-family:var(--fm)">${escHtml(currentUser.email)}</div>
-      </div>
-      <button class="btn bg bs" style="width:100%;font-size:12px" onclick="logout()">🚪 Вихід</button>
-    `;
-  } else {
-    userSec.innerHTML='';
-  }
+  if(!currentUser){userSec.innerHTML='';return;}
+  const roleLabel=currentUser.role==='admin'?'Адміністратор':'Користувач';
+  userSec.innerHTML=`
+    <div style="padding:8px 0;color:var(--t3);font-size:11px;letter-spacing:1px;text-transform:uppercase">${roleLabel}</div>
+    <div style="padding:8px 12px;margin-bottom:8px;background:var(--s2);border-radius:7px;border:1px solid var(--b1)">
+      <div style="font-size:13px;color:var(--t1);font-weight:500">${escHtml(currentUser.name||currentUser.email)}</div>
+      <div style="font-size:11px;color:var(--t3);font-family:var(--fm)">${escHtml(currentUser.email)}</div>
+    </div>
+    <button class="btn bg bs" style="width:100%;font-size:12px" onclick="logout()">🚪 Вийти</button>
+  `;
 }
 
 // Bootstrap on load
