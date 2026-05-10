@@ -821,7 +821,7 @@ function renderDash(){
   <div class="cd" style="margin-bottom:20px;padding:0;overflow:hidden">
     <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--b1)"><div class="st">Останні транзакції</div><span style="font-size:12px;color:var(--t3)">Баланс: ${bH(recent.slice(0,30).reduce((s,t)=>s+t.amount,0))}</span></div>
     ${recent.length===0?'<div style="color:var(--t3);text-align:center;padding:20px">Немає транзакцій</div>':
-    `<table><thead><tr><th>Дата</th><th>Сайт</th><th>Команда</th><th>SEO</th><th>Категорія</th><th>Тип</th><th>Коментар</th><th style="text-align:right">Сума</th><th></th></tr></thead>
+    `<table><thead><tr><th>Дата</th><th>Сайт</th><th>Команда</th><th>SEO</th><th>Категорія</th><th>Коментар</th><th style="text-align:right">Сума</th><th></th></tr></thead>
     <tbody>${renderTxRows(recent.slice(0,30))}</tbody></table>`}
   </div>
   <div class="cd" style="padding:0;overflow:hidden">
@@ -1145,22 +1145,21 @@ function renderSiteExp(domain){
     ${(()=>{const selCount=filt.filter(t=>selExpTx.has(t.id)).length;return selCount>0?`<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--acd);border-bottom:1px solid var(--b2)"><span style="color:var(--ac);font-family:var(--fm);font-weight:600">${selCount}</span><span style="color:var(--t2);font-size:13px">вибрано</span><button class="btn bg bs" onclick="showBulkExpTx('team')">↔ Команду</button><button class="btn bg bs" onclick="showBulkExpTx('seo')">👤 SEO</button><button class="btn bg bs" style="margin-left:auto" onclick="selExpTx=new Set();renderSites()">Зняти</button></div>`:''})()}
     <table class="exp-tbl"><thead><tr>
       <th style="padding:8px 16px;font-size:10px;width:30px">${chk(filt.length>0&&filt.every(t=>selExpTx.has(t.id)),"event.stopPropagation();toggleAllExpTx('"+d+"')")}</th>
-      <th style="padding:8px 16px;font-size:10px">Дата</th><th style="padding:8px 16px;font-size:10px">Команда</th><th style="padding:8px 16px;font-size:10px">Тип</th>
+      <th style="padding:8px 16px;font-size:10px">Дата</th><th style="padding:8px 16px;font-size:10px">Команда</th>
       <th style="padding:8px 16px;font-size:10px">Категорія</th><th style="padding:8px 16px;font-size:10px">SEO</th>
       <th style="padding:8px 16px;font-size:10px">Коментар</th><th style="padding:8px 16px;font-size:10px;text-align:right">Сума</th>
       <th style="padding:8px 16px;font-size:10px"></th>
     </tr></thead><tbody>
     ${filt.slice(0,60).map(t=>`<tr>
       <td onclick="event.stopPropagation()">${chk(selExpTx.has(t.id),"event.stopPropagation();toggleExpTx("+t.id+")")}</td>
-      <td class="fm" style="color:var(--t3);white-space:nowrap">${t.date||'—'}</td>
+      <td class="fm" style="color:var(--t3);white-space:nowrap">${escHtml(t.date||'—')}</td>
       <td>${tbadge(t.team)}</td>
-      <td>${t.amount>=0?'<span class="ti">Дохід</span>':'<span class="to">Витрата</span>'}</td>
       <td>${cbadge(t.category)}</td><td style="color:var(--t2)">${escHtml(t.seoName||t.seo||'—')}</td>
-      <td style="color:var(--t3);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.comment||'—')}</td>
-      <td style="text-align:right">${txAmtDisplay(t)}</td>
+      <td style="color:var(--t3);min-width:240px;max-width:380px;white-space:normal;word-break:break-word">${escHtml(t.comment||'—')}</td>
+      <td style="text-align:right;white-space:nowrap">${txAmtDisplay(t)}</td>
       <td><div style="display:flex;gap:4px"><button class="btn bg bs" onclick="showEditTx(${t.id})" style="padding:3px 7px;font-size:11px">✎</button><button class="btn brd bs" onclick="confirmDeleteTx(${t.id})" style="padding:3px 7px;font-size:11px">🗑</button></div></td>
     </tr>`).join('')}
-    ${filt.length===0?`<tr><td colspan="9" style="padding:20px 16px;color:var(--t3);text-align:center">Немає транзакцій</td></tr>`:''}
+    ${filt.length===0?`<tr><td colspan="8" style="padding:20px 16px;color:var(--t3);text-align:center">Немає транзакцій</td></tr>`:''}
     </tbody></table>
   </div></td></tr>`;
 }
@@ -1818,9 +1817,8 @@ function renderTxRow(t){
       <td>${tbadge(t.team)}</td>
       <td style="font-size:12px;color:var(--t2)">${t.seo?'@'+escHtml(t.seo):'—'}</td>
       <td>${cbadge(t.category)}</td>
-      <td>${t.amount>=0?'<span class="ti">Дохід</span>':'<span class="to">Витрата</span>'}</td>
-      <td style="font-size:12px;color:var(--t3);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.comment||'—')}</td>
-      <td style="text-align:right">${txAmtDisplay(t)}</td>
+      <td style="font-size:12px;color:var(--t3);min-width:240px;max-width:380px;white-space:normal;word-break:break-word">${escHtml(t.comment||'—')}</td>
+      <td style="text-align:right;white-space:nowrap">${txAmtDisplay(t)}</td>
       <td><div style="display:flex;gap:4px">
         ${showEdit?`<button class="btn bg bs" onclick="showEditTx(${t.id})" style="padding:3px 7px;font-size:11px">✎</button>`:''}
         ${showDel?`<button class="btn brd bs" onclick="confirmDeleteTx(${t.id})" style="padding:3px 7px;font-size:11px">🗑</button>`:''}
@@ -1845,16 +1843,15 @@ function renderTxRows(txs){
         <td>${teams.map(tt=>tbadge(tt)).join(' ')}</td>
         <td style="font-size:12px;color:var(--t2)">Розподілено</td>
         <td>${cbadge(t.category)}</td>
-        <td>${totalAmt>=0?'<span class="ti">Дохід</span>':'<span class="to">Витрата</span>'}</td>
-        <td style="font-size:12px;color:var(--t3);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.comment||'—')}</td>
-        <td style="text-align:right">${aH(totalAmt)}</td>
+        <td style="font-size:12px;color:var(--t3);min-width:240px;max-width:380px;white-space:normal;word-break:break-word">${escHtml(t.comment||'—')}</td>
+        <td style="text-align:right;white-space:nowrap">${aH(totalAmt)}</td>
         <td><div style="display:flex;gap:4px" onclick="event.stopPropagation()">
           ${showEdit?`<button class="btn bg bs" onclick="showEditTx(${t.id})" style="padding:3px 7px;font-size:11px">✎</button>`:''}
           ${showDel?`<button class="btn brd bs" onclick="confirmDeleteTx(${t.id})" style="padding:3px 7px;font-size:11px">🗑</button>`:''}
         </div></td>
       </tr>`;
       if(isExp){
-        html+=`<tr><td colspan="9" style="padding:0;background:#0c0f14"><table class="exp-tbl" style="width:100%">
+        html+=`<tr><td colspan="8" style="padding:0;background:#0c0f14"><table class="exp-tbl" style="width:100%">
           ${group.map(g=>`<tr><td style="padding-left:32px">${tbadge(g.team)}</td><td style="font-size:12px;color:var(--t2)">${g.seo?'@'+escHtml(g.seo):'—'}</td><td style="text-align:right">${aH(g.amount)}</td></tr>`).join('')}
         </table></td></tr>`;
       }
@@ -1901,7 +1898,7 @@ function renderTx(){
     ${exp<0?`<span style="color:var(--t3);font-size:12px">↓ <span style="color:var(--rd)">${getCurSym()}${nf(Math.abs(exp))}</span></span>`:''}
   </div></div>
   <div class="cd" style="padding:0;overflow:hidden">
-    <table><thead><tr><th>Дата</th><th>Сайт</th><th>Команда</th><th>SEO</th><th>Категорія</th><th>Тип</th><th>Коментар</th><th style="text-align:right">Сума</th><th></th></tr></thead>
+    <table><thead><tr><th>Дата</th><th>Сайт</th><th>Команда</th><th>SEO</th><th>Категорія</th><th>Коментар</th><th style="text-align:right">Сума</th><th></th></tr></thead>
     <tbody id="tx-tbody">${renderTxRows(shown)}</tbody></table>
     ${hasMore?`<div style="padding:14px;text-align:center;border-top:1px solid var(--b1)">
       <button class="btn bg" onclick="txLoadMore()">Завантажити ще (${filtered.length-txInfiniteCount} залишилось)</button>
