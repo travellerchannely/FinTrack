@@ -1101,7 +1101,7 @@ function filtTx(txs,f){
     if(from&&t.date<from)return false;
     if(to&&t.date>to)return false;
     return true;
-  }).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  }).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 }
 
 function renderSiteExp(domain){
