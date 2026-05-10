@@ -516,7 +516,10 @@ let demoUser=null;
 
 function getTeams(){return DB.teams&&DB.teams.length?DB.teams:['Fortuna','Phoenix','Baza','Brand','Review'];}
 function getCurSym(){return DB.currency==='eur'?'€':'$';}
-function getRate(){return parseFloat(DB.eurRate)||1;}
+// EUR/USD rate: за замовчуванням 0.92 (можна змінити в Налаштуваннях).
+// Раніше був fallback 1, через що EUR-транзакції не конвертувались і зберігались
+// з номіналом USD (наприклад €100 → $100, що було некоректно).
+function getRate(){const r=parseFloat(DB.eurRate);return r>0?r:0.92;}
 
 // ── Server API client ──────────────────────────────────────
 function _emptyDB(){return{sites:{},seos:{},transactions:[],users:[],teams:['Fortuna','Phoenix','Baza','Brand','Review'],catIncome:['Hybrid','RevShare','CPA','Flat','Bonus'],catExpense:['Domain','Links','Host','Content','Services','Other']};}
@@ -599,6 +602,7 @@ async function loadDBFromServer(){
   DB.users=DB.users||[];DB.teams=DB.teams||['Fortuna','Phoenix','Baza','Brand','Review'];
   DB.catIncome=DB.catIncome||['Hybrid','RevShare','CPA','Flat','Bonus'];
   DB.catExpense=DB.catExpense||['Domain','Links','Host','Content','Services','Other'];
+  if(typeof DB.eurRate!=='number'||DB.eurRate<=0)DB.eurRate=0.92;
 }
 
 function getActiveUser(){return demoUser||currentUser;}
@@ -757,7 +761,15 @@ function nfi(v){return nf(v,0);}
 function bH(v){const s=getCurSym();return v>=0?`<span class="ap">${s}${nf(v)}</span>`:`<span class="an">-${s}${nf(Math.abs(v))}</span>`;}
 function aH(v){const s=getCurSym();return v>=0?`<span class="ap">+${s}${nf(v)}</span>`:`<span class="an">-${s}${nf(Math.abs(v))}</span>`;}
 function txAmtDisplay(t){
-  // Always show in $ (amounts stored internally in USD)
+  // Зберігаємо завжди в USD (для коректної агрегації балансу),
+  // але якщо оригінал був в EUR — показуємо в EUR (помножимо назад на rate),
+  // щоб користувач бачив суму як він її ввів.
+  if(t.origCur==='eur'){
+    const eurAmt=t.amount*getRate();
+    return eurAmt>=0
+      ?`<span class="ap">+€${nf(eurAmt)}</span>`
+      :`<span class="an">-€${nf(Math.abs(eurAmt))}</span>`;
+  }
   return aH(t.amount);
 }
 function pgr(total,page,fn,px){
