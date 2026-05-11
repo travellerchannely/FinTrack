@@ -1442,9 +1442,9 @@ function showEditTx(id){
   const cats=[...new Set(DB.transactions.map(x=>x.category).filter(Boolean))].sort();
   initTeamSplit(t.team);
   showModal(`<div class="md" onclick="event.stopPropagation()">
-    <div class="mdt">Редагувати транзакцію</div>
+    <div class="mdt">${t.amount<0?'Редагувати витрату':'Редагувати дохід'}</div>
     <div class="fr"><div class="fl">Дата</div><div class="inp" id="et-date-trigger" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="openCdp(this,document.getElementById('et-date').value,function(v){document.getElementById('et-date').value=v;document.getElementById('et-date-label').textContent=v||'Оберіть дату'})"><span id="et-date-label">${t.date||'Оберіть дату'}</span><span style="color:var(--t3)">📅</span></div><input type="hidden" id="et-date" value="${t.date||''}"></div>
-    <div class="fr"><div class="fl">Сума</div><div style="display:flex;gap:8px"><input class="inp" type="number" step="0.01" id="et-amt" value="${t.origCur==='eur'?parseFloat((t.amount*getRate()).toFixed(2)):t.amount}" style="flex:1"><select class="inp" id="et-cur" style="width:70px"><option value="usd" ${t.origCur!=='eur'?'selected':''}>$</option><option value="eur" ${t.origCur==='eur'?'selected':''}>€</option></select></div></div>
+    <div class="fr"><div class="fl">Сума</div><div style="display:flex;gap:8px"><input class="inp" type="number" step="0.01" id="et-amt" value="${t.origCur==='eur'?Math.abs(parseFloat((t.amount*getRate()).toFixed(2))):Math.abs(t.amount)}" style="flex:1"><select class="inp" id="et-cur" style="width:70px"><option value="usd" ${t.origCur!=='eur'?'selected':''}>$</option><option value="eur" ${t.origCur==='eur'?'selected':''}>€</option></select></div></div>
     <div class="fr"><div class="fl">Сайт</div>${buildSiteDropdown(t.site)}</div>
     <div id="team-split-wrap"></div>
     <div class="fr"><div class="fl">Категорія</div><select class="inp" id="et-cat"><option value="">—</option>${cats.map(c=>`<option ${t.category===c?'selected':''} value="${c}">${c}</option>`).join('')}</select></div>
@@ -1463,7 +1463,7 @@ function showEditTx(id){
   if(t.splitGroup){
     const groupTxs=DB.transactions.filter(x=>x.splitGroup===t.splitGroup&&!x.deleted);
     const totalAmt=groupTxs.reduce((s,x)=>s+x.amount,0);
-    document.getElementById('et-amt').value=totalAmt;
+    document.getElementById('et-amt').value=Math.abs(totalAmt);
     // Pre-select teams from group
     txTeamSplit.enabled=true;
     const groupTeams=[...new Set(groupTxs.map(x=>x.team))];
