@@ -916,6 +916,7 @@ function renderAnalytics(){
   const margin=total.income>0?(total.profit/total.income*100):0;
   const pills=[{k:'prev',l:'Попер. місяць'},{k:'cur',l:'Поточний місяць'},{k:'year',l:'Цей рік'},{k:'all',l:'Весь час'},{k:'custom',l:'Вибрати дати'}];
   const s=getCurSym();
+  const isAdmin=currentUser&&currentUser.role==='admin'&&!demoUser;
 
   const periodSel=`<div class="prow">${pills.map(p=>`<button class="pp ${analyticsP===p.k?'a':''}" onclick="analyticsP='${p.k}';analyticsExpTeams=new Set();analyticsExpSeo=new Set();renderAnalytics()">${p.l}</button>`).join('')}</div>
     ${analyticsP==='custom'?`<div class="exp-daterow">
@@ -933,8 +934,8 @@ function renderAnalytics(){
       <td style="text-align:right" class="fm">${s}${nf(tdata.income)}</td>
       <td style="text-align:right" class="fm">${s}${nf(Math.abs(tdata.expense))}</td>
       <td style="text-align:right" class="fm">${tProfit>=0?'<span class="ap">':'<span class="an">'}${s}${nf(Math.abs(tProfit))}</span></td>
-      <td style="text-align:right" class="fm">${tMargin.toFixed(1)}%</td>
-      <td style="text-align:right" class="fm">${tRoi.toFixed(1)}%</td>
+      ${isAdmin?`<td style="text-align:right" class="fm">${tMargin.toFixed(1)}%</td>
+      <td style="text-align:right" class="fm">${tRoi.toFixed(1)}%</td>`:''}
     </tr>`];
 
     if(isExp){
@@ -949,8 +950,8 @@ function renderAnalytics(){
           <td style="text-align:right" class="fm">${s}${nf(seoData.income)}</td>
           <td style="text-align:right" class="fm">${s}${nf(Math.abs(seoData.expense))}</td>
           <td style="text-align:right" class="fm">${sProfit>=0?'<span class="ap">':'<span class="an">'}${s}${nf(Math.abs(sProfit))}</span></td>
-          <td style="text-align:right" class="fm">${sMargin.toFixed(1)}%</td>
-          <td style="text-align:right" class="fm">${sRoi.toFixed(1)}%</td>
+          ${isAdmin?`<td style="text-align:right" class="fm">${sMargin.toFixed(1)}%</td>
+          <td style="text-align:right" class="fm">${sRoi.toFixed(1)}%</td>`:''}
         </tr>`);
 
         if(isSeoExp){
@@ -964,8 +965,8 @@ function renderAnalytics(){
               <td style="text-align:right" class="fm">${s}${nf(siteData.income)}</td>
               <td style="text-align:right" class="fm">${s}${nf(Math.abs(siteData.expense))}</td>
               <td style="text-align:right" class="fm">${siProfit>=0?'<span class="ap">':'<span class="an">'}${s}${nf(Math.abs(siProfit))}</span></td>
-              <td style="text-align:right" class="fm">${siMargin.toFixed(1)}%</td>
-              <td style="text-align:right" class="fm">${siRoi.toFixed(1)}%</td>
+              ${isAdmin?`<td style="text-align:right" class="fm">${siMargin.toFixed(1)}%</td>
+              <td style="text-align:right" class="fm">${siRoi.toFixed(1)}%</td>`:''}
             </tr>`);
           });
         }
@@ -990,7 +991,7 @@ function renderAnalytics(){
     <div class="sc"><div class="sl">Загальний дохід</div><div class="sv ap">${s}${nf(total.income)}</div></div>
     <div class="sc"><div class="sl">Загальні витрати</div><div class="sv an">${s}${nf(Math.abs(total.expense))}</div></div>
     <div class="sc"><div class="sl">Прибуток (P&L)</div><div class="sv ${total.profit>=0?'ap':'an'}">${s}${nf(Math.abs(total.profit))}</div></div>
-    <div class="sc"><div class="sl">Маржинальність</div><div class="sv">${margin.toFixed(1)}%</div></div>
+    ${isAdmin?`<div class="sc"><div class="sl">Маржинальність</div><div class="sv">${margin.toFixed(1)}%</div></div>`:''}
   </div>
 
   <div class="cd" style="margin-bottom:20px;padding:0;overflow:hidden">
@@ -1000,8 +1001,8 @@ function renderAnalytics(){
       <th style="text-align:right">Дохід</th>
       <th style="text-align:right">Витрати</th>
       <th style="text-align:right">Прибуток</th>
-      <th style="text-align:right">Маржа %</th>
-      <th style="text-align:right">ROI %</th>
+      ${isAdmin?`<th style="text-align:right">Маржа %</th>
+      <th style="text-align:right">ROI %</th>`:''}
     </tr></thead>
     <tbody>${teamTableRows}</tbody>
     </table>
