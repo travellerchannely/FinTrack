@@ -1289,8 +1289,43 @@ function onTeamChange(team){
   // unlock team field (site selection may have locked it)
   const sel=document.getElementById('et-team');if(sel)sel.disabled=false;
 }
+function parseAmtValue(s){
+  if(s==null)return NaN;
+  const cleaned=String(s).replace(/[\s ]/g,'').replace(',','.');
+  return parseFloat(cleaned);
+}
+function fmtAmtValue(v){
+  if(v==null||isNaN(v))return'';
+  const fixed=Math.abs(Number(v))%1===0?String(Math.abs(Number(v))):Math.abs(Number(v)).toFixed(2).replace(/\.?0+$/,'');
+  const [whole,frac]=fixed.split('.');
+  const grouped=whole.replace(/\B(?=(\d{3})+(?!\d))/g,' ');
+  return(Number(v)<0?'-':'')+grouped+(frac?'.'+frac:'');
+}
+function formatAmtInput(inp){
+  const raw=inp.value||'';
+  const start=inp.selectionStart??raw.length;
+  let digitsBefore=0;
+  for(let i=0;i<start;i++){if(/\d/.test(raw[i]))digitsBefore++;}
+  let cleaned=raw.replace(/,/g,'.').replace(/[^\d.]/g,'');
+  const firstDot=cleaned.indexOf('.');
+  if(firstDot>=0){
+    cleaned=cleaned.slice(0,firstDot+1)+cleaned.slice(firstDot+1).replace(/\./g,'');
+    const p=cleaned.split('.');
+    cleaned=p[0]+'.'+p[1].slice(0,2);
+  }
+  const parts=cleaned.split('.');
+  const intFormatted=parts[0]?parts[0].replace(/^0+(?=\d)/,'').replace(/\B(?=(\d{3})+(?!\d))/g,' '):'';
+  const formatted=intFormatted+(parts.length>1?'.'+parts[1]:'');
+  if(formatted===raw)return;
+  inp.value=formatted;
+  let pos=0,seen=0;
+  for(;pos<formatted.length&&seen<digitsBefore;pos++){
+    if(/\d/.test(formatted[pos]))seen++;
+  }
+  try{inp.setSelectionRange(pos,pos);}catch(e){}
+}
 function getTxTotal(){
-  const v=parseFloat(document.getElementById('et-amt')?.value);
+  const v=parseAmtValue(document.getElementById('et-amt')?.value);
   return isNaN(v)?0:Math.abs(v);
 }
 function _updateSplitCounter(){
@@ -1374,7 +1409,7 @@ function toggleSeoSplitItem(h){txSeoSplit.seos[h]=!txSeoSplit.seos[h];renderSeoS
 function renderSeoSplitUI(){
   const el=document.getElementById('seo-split-wrap');if(!el)return;
   if(!txSeoSplit.enabled){el.innerHTML='';return;}
-  const amt=parseFloat(document.getElementById('et-amt')?.value)||0;
+  const amt=parseAmtValue(document.getElementById('et-amt')?.value)||0;
   // Get available SEOs based on selected teams
   const selTeams=getTeams().filter(t=>txTeamSplit.teams[t]?.sel);
   const team=!txTeamSplit.enabled?document.getElementById('et-team')?.value:'';
@@ -1499,7 +1534,7 @@ function showEditTx(id){
   showModal(`<div class="md" onclick="event.stopPropagation()">
     <div class="mdt">${t.amount<0?'Редагувати витрату':'Редагувати дохід'}</div>
     <div class="fr"><div class="fl">Дата</div><div class="inp" id="et-date-trigger" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="openCdp(this,document.getElementById('et-date').value,function(v){document.getElementById('et-date').value=v;document.getElementById('et-date-label').textContent=v||'Оберіть дату'})"><span id="et-date-label">${t.date||'Оберіть дату'}</span><span style="color:var(--t3)">📅</span></div><input type="hidden" id="et-date" value="${t.date||''}"></div>
-    <div class="fr"><div class="fl">Сума</div><div style="display:flex;gap:8px"><input class="inp" type="number" step="0.01" id="et-amt" value="${t.origCur==='eur'?Math.abs(parseFloat((t.amount*getRate()).toFixed(2))):Math.abs(t.amount)}" oninput="recalcSplitAmounts()" style="flex:1"><select class="inp" id="et-cur" style="width:70px"><option value="usd" ${t.origCur!=='eur'?'selected':''}>$</option><option value="eur" ${t.origCur==='eur'?'selected':''}>€</option></select></div></div>
+    <div class="fr"><div class="fl">Сума</div><div style="display:flex;gap:8px"><input class="inp" type="text" inputmode="decimal" id="et-amt" value="${fmtAmtValue(t.origCur==='eur'?Math.abs(parseFloat((t.amount*getRate()).toFixed(2))):Math.abs(t.amount))}" oninput="formatAmtInput(this);recalcSplitAmounts()" style="flex:1"><select class="inp" id="et-cur" style="width:70px"><option value="usd" ${t.origCur!=='eur'?'selected':''}>$</option><option value="eur" ${t.origCur==='eur'?'selected':''}>€</option></select></div></div>
     <div class="fr"><div class="fl">Сайт</div>${buildSiteDropdown(t.site)}</div>
     <div id="team-split-wrap"></div>
     <div class="fr"><div class="fl">Категорія</div><select class="inp" id="et-cat"><option value="">—</option>${cats.map(c=>`<option ${t.category===c?'selected':''} value="${c}">${c}</option>`).join('')}</select></div>
@@ -1518,7 +1553,7 @@ function showEditTx(id){
   if(t.splitGroup){
     const groupTxs=DB.transactions.filter(x=>x.splitGroup===t.splitGroup&&!x.deleted);
     const totalAmt=groupTxs.reduce((s,x)=>s+x.amount,0);
-    document.getElementById('et-amt').value=Math.abs(totalAmt);
+    document.getElementById('et-amt').value=fmtAmtValue(Math.abs(totalAmt));
     // Pre-select teams from group
     txTeamSplit.enabled=true;
     const groupTeams=[...new Set(groupTxs.map(x=>x.team))];
@@ -1538,7 +1573,7 @@ function showEditTx(id){
 function saveEditTx(id){
   const t=DB.transactions.find(x=>x.id===id);if(!t)return;
   const seo=document.getElementById('et-seo').value;
-  const amtRaw=parseFloat(document.getElementById('et-amt').value)||0;
+  const amtRaw=parseAmtValue(document.getElementById('et-amt').value)||0;
   const selCur=document.getElementById('et-cur')?.value||'usd';
   let amt=amtRaw;
   if(selCur==='eur'){amt=parseFloat((amtRaw/getRate()).toFixed(2));}
@@ -1621,7 +1656,7 @@ function showAddTx(txType){
     <div class="fr"><div class="fl">Дата</div><div class="inp" id="et-date-trigger" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="openCdp(this,document.getElementById('et-date').value,function(v){document.getElementById('et-date').value=v;document.getElementById('et-date-label').textContent=v||'Оберіть дату'})"><span id="et-date-label">${today()}</span><span style="color:var(--t3)">📅</span></div><input type="hidden" id="et-date" value="${today()}"></div>
     <div class="fr"><div class="fl">Сума</div>
       <div style="display:flex;gap:8px">
-        <input class="inp" type="number" step="0.01" id="et-amt" value="" oninput="recalcSplitAmounts()" style="flex:1">
+        <input class="inp" type="text" inputmode="decimal" id="et-amt" value="" oninput="formatAmtInput(this);recalcSplitAmounts()" style="flex:1">
         <select class="inp" id="et-cur" style="width:70px">
           <option value="usd">$</option>
           <option value="eur">€</option>
@@ -1646,7 +1681,7 @@ function showAddTx(txType){
 function addTxSave(txType){
   const isIncome=txType==='income';
   const isExpense=txType==='expense';
-  const amtRaw=parseFloat(document.getElementById('et-amt').value);
+  const amtRaw=parseAmtValue(document.getElementById('et-amt').value);
   let site=document.getElementById('et-site').value.trim();
   const siteSelected=!!site; // користувач щось ввів/вибрав з dropdown
   // "Без Сайту" — не реальний сайт, а placeholder. Зберігаємо як null/empty.
