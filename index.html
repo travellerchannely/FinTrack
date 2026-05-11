@@ -1259,12 +1259,19 @@ function renderTeamSplit(){
   const selTeams=teams.filter(t=>txTeamSplit.teams[t]?.sel);
   const totalPct=selTeams.reduce((s,t)=>s+(parseFloat(txTeamSplit.teams[t]?.pct)||0),0);
   const focusId=txTeamSplit._focusId||null;
+  const txTotal=getTxTotal();
+  const sym=getCurSym();
   el.innerHTML=`<div class="fr" style="margin-bottom:6px"><div class="fl">Команди (мультивибір)</div></div>
-  ${teams.map(t=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-    <div class="cb ${txTeamSplit.teams[t]?.sel?'c':''}" onclick="toggleSplitTeam('${t}')">${txTeamSplit.teams[t]?.sel?'✓':''}</div>
+  ${teams.map(t=>{
+    const isSel=!!txTeamSplit.teams[t]?.sel;
+    const pct=parseFloat(txTeamSplit.teams[t]?.pct)||0;
+    const amt=txTotal*pct/100;
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+    <div class="cb ${isSel?'c':''}" onclick="toggleSplitTeam('${t}')">${isSel?'✓':''}</div>
     <span style="font-size:13px;min-width:80px">${t}</span>
-    ${txTeamSplit.teams[t]?.sel?`<input class="inp inp-sm" type="number" min="0" max="100" step="1" id="pct-${t}" value="${txTeamSplit.teams[t].pct||''}" placeholder="%" oninput="setSplitPct('${t}',this)" style="width:70px"> %`:''}
-  </div>`).join('')}
+    ${isSel?`<input class="inp inp-sm" type="number" min="0" max="100" step="1" id="pct-${t}" value="${txTeamSplit.teams[t].pct||''}" placeholder="%" oninput="setSplitPct('${t}',this)" style="width:70px"> %
+    <input class="inp inp-sm" type="number" min="0" step="0.01" id="amt-${t}" value="${amt?amt.toFixed(2):''}" placeholder="${sym}" oninput="setSplitAmt('${t}',this)" style="width:100px"> ${sym}`:''}
+  </div>`;}).join('')}
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
     <button class="btn bg bs" style="font-size:12px" onclick="distributeEvenly()">↔ Рівномірно розподілити</button>
     <span id="split-pct-counter" style="font-size:12px;color:${Math.abs(totalPct-100)<0.01?'var(--ac)':totalPct>100?'var(--rd)':'var(--t3)'}">${totalPct.toFixed(0)}% / 100%</span>
@@ -1282,14 +1289,12 @@ function onTeamChange(team){
   // unlock team field (site selection may have locked it)
   const sel=document.getElementById('et-team');if(sel)sel.disabled=false;
 }
-function setSplitPct(t,inp){
+function getTxTotal(){
+  const v=parseFloat(document.getElementById('et-amt')?.value);
+  return isNaN(v)?0:Math.abs(v);
+}
+function _updateSplitCounter(){
   const teams=getTeams();
-  let v=parseFloat(inp.value)||0;
-  const others=teams.filter(x=>x!==t&&txTeamSplit.teams[x]?.sel).reduce((s,x)=>s+(parseFloat(txTeamSplit.teams[x]?.pct)||0),0);
-  const maxAllowed=100-others;
-  if(v>maxAllowed){v=maxAllowed;inp.value=v;}
-  txTeamSplit.teams[t].pct=v;
-  // Update only the percentage counter without full re-render
   const selTeams=teams.filter(x=>txTeamSplit.teams[x]?.sel);
   const totalPct=selTeams.reduce((s,x)=>s+(parseFloat(txTeamSplit.teams[x]?.pct)||0),0);
   const counter=document.getElementById('split-pct-counter');
@@ -1297,6 +1302,56 @@ function setSplitPct(t,inp){
     counter.style.color=Math.abs(totalPct-100)<0.01?'var(--ac)':totalPct>100?'var(--rd)':'var(--t3)';
     counter.textContent=totalPct.toFixed(0)+'% / 100%';
   }
+}
+function setSplitPct(t,inp){
+  const teams=getTeams();
+  let v=parseFloat(inp.value)||0;
+  const others=teams.filter(x=>x!==t&&txTeamSplit.teams[x]?.sel).reduce((s,x)=>s+(parseFloat(txTeamSplit.teams[x]?.pct)||0),0);
+  const maxAllowed=100-others;
+  if(v>maxAllowed){v=maxAllowed;inp.value=v;}
+  txTeamSplit.teams[t].pct=v;
+  // Sync the amount field for this team
+  const txTotal=getTxTotal();
+  const amtInp=document.getElementById('amt-'+t);
+  if(amtInp){const a=txTotal*v/100;amtInp.value=a?a.toFixed(2):'';}
+  _updateSplitCounter();
+  if(txSeoSplit.enabled)renderSeoSplitUI();
+}
+function setSplitAmt(t,inp){
+  const txTotal=getTxTotal();
+  if(!txTotal){
+    // No total entered yet — cannot derive percentage. Keep amount, reset pct.
+    txTeamSplit.teams[t].pct=0;
+    const pctInp=document.getElementById('pct-'+t);if(pctInp)pctInp.value='';
+    _updateSplitCounter();
+    return;
+  }
+  const teams=getTeams();
+  let amt=parseFloat(inp.value)||0;
+  let v=amt/txTotal*100;
+  const others=teams.filter(x=>x!==t&&txTeamSplit.teams[x]?.sel).reduce((s,x)=>s+(parseFloat(txTeamSplit.teams[x]?.pct)||0),0);
+  const maxAllowed=100-others;
+  if(v>maxAllowed){
+    v=maxAllowed;
+    amt=txTotal*v/100;
+    inp.value=amt?amt.toFixed(2):'';
+  }
+  const pctRounded=parseFloat(v.toFixed(2));
+  txTeamSplit.teams[t].pct=pctRounded;
+  const pctInp=document.getElementById('pct-'+t);
+  if(pctInp)pctInp.value=pctRounded||'';
+  _updateSplitCounter();
+  if(txSeoSplit.enabled)renderSeoSplitUI();
+}
+function recalcSplitAmounts(){
+  if(!txTeamSplit.enabled)return;
+  const txTotal=getTxTotal();
+  getTeams().forEach(t=>{
+    if(!txTeamSplit.teams[t]?.sel)return;
+    const pct=parseFloat(txTeamSplit.teams[t]?.pct)||0;
+    const amtInp=document.getElementById('amt-'+t);
+    if(amtInp){const a=txTotal*pct/100;amtInp.value=a?a.toFixed(2):'';}
+  });
   if(txSeoSplit.enabled)renderSeoSplitUI();
 }
 
@@ -1444,7 +1499,7 @@ function showEditTx(id){
   showModal(`<div class="md" onclick="event.stopPropagation()">
     <div class="mdt">${t.amount<0?'Редагувати витрату':'Редагувати дохід'}</div>
     <div class="fr"><div class="fl">Дата</div><div class="inp" id="et-date-trigger" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="openCdp(this,document.getElementById('et-date').value,function(v){document.getElementById('et-date').value=v;document.getElementById('et-date-label').textContent=v||'Оберіть дату'})"><span id="et-date-label">${t.date||'Оберіть дату'}</span><span style="color:var(--t3)">📅</span></div><input type="hidden" id="et-date" value="${t.date||''}"></div>
-    <div class="fr"><div class="fl">Сума</div><div style="display:flex;gap:8px"><input class="inp" type="number" step="0.01" id="et-amt" value="${t.origCur==='eur'?Math.abs(parseFloat((t.amount*getRate()).toFixed(2))):Math.abs(t.amount)}" style="flex:1"><select class="inp" id="et-cur" style="width:70px"><option value="usd" ${t.origCur!=='eur'?'selected':''}>$</option><option value="eur" ${t.origCur==='eur'?'selected':''}>€</option></select></div></div>
+    <div class="fr"><div class="fl">Сума</div><div style="display:flex;gap:8px"><input class="inp" type="number" step="0.01" id="et-amt" value="${t.origCur==='eur'?Math.abs(parseFloat((t.amount*getRate()).toFixed(2))):Math.abs(t.amount)}" oninput="recalcSplitAmounts()" style="flex:1"><select class="inp" id="et-cur" style="width:70px"><option value="usd" ${t.origCur!=='eur'?'selected':''}>$</option><option value="eur" ${t.origCur==='eur'?'selected':''}>€</option></select></div></div>
     <div class="fr"><div class="fl">Сайт</div>${buildSiteDropdown(t.site)}</div>
     <div id="team-split-wrap"></div>
     <div class="fr"><div class="fl">Категорія</div><select class="inp" id="et-cat"><option value="">—</option>${cats.map(c=>`<option ${t.category===c?'selected':''} value="${c}">${c}</option>`).join('')}</select></div>
@@ -1566,7 +1621,7 @@ function showAddTx(txType){
     <div class="fr"><div class="fl">Дата</div><div class="inp" id="et-date-trigger" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between" onclick="openCdp(this,document.getElementById('et-date').value,function(v){document.getElementById('et-date').value=v;document.getElementById('et-date-label').textContent=v||'Оберіть дату'})"><span id="et-date-label">${today()}</span><span style="color:var(--t3)">📅</span></div><input type="hidden" id="et-date" value="${today()}"></div>
     <div class="fr"><div class="fl">Сума</div>
       <div style="display:flex;gap:8px">
-        <input class="inp" type="number" step="0.01" id="et-amt" value="" style="flex:1">
+        <input class="inp" type="number" step="0.01" id="et-amt" value="" oninput="recalcSplitAmounts()" style="flex:1">
         <select class="inp" id="et-cur" style="width:70px">
           <option value="usd">$</option>
           <option value="eur">€</option>
